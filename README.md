@@ -11,11 +11,20 @@ User Command → Gemini (Intent Parser) → Action Executor → Database → Web
 ## Features
 
 - **Intent Recognition**: Natural language to structured actions via Gemini
-- **Database Mutations**: Full CRUD for Products and Orders
+- **Role-Based Commands**: Different commands for Super Admin, Shop Admin, and Customers
+- **Multi-Vendor Marketplace**: Manage multiple shops, products, and orders
+- **Smart Form Pre-fill**: Commands can pre-fill forms for user review
+- **Autocomplete Suggestions**: Get command suggestions as you type
+- **Quick Actions**: One-click buttons for common tasks
+- **Database Mutations**: Full CRUD for Products, Orders, Shops, and Users
 - **Context Awareness**: Session memory for contextual commands
 - **Real-time Updates**: WebSocket broadcasts for live UI updates
 - **Safety Rails**: Confirmation required for destructive operations
 - **Multi-step Execution**: Complex commands broken into action plans
+
+## Documentation
+
+- **[Command Guide](docs/COMMAND_GUIDE.md)** - Complete guide to all commands by role
 
 ## Tech Stack
 
@@ -158,6 +167,26 @@ KommandAI/
 ├── run.py
 └── README.md
 ```
+
+## User Roles
+
+KommandAI supports three user roles with different capabilities:
+
+| Role | Description | Key Commands |
+|------|-------------|--------------|
+| **Super Admin** | Platform administrator | Manage shops, verify shops, manage users, view platform stats |
+| **Shop Admin** | Shop owner/manager | Manage products, process orders, view dashboard |
+| **Customer** | End user | Browse shops, place orders, track orders |
+
+### Demo Credentials
+
+After running `python seed_data.py`:
+
+| Role | Email | Password |
+|------|-------|----------|
+| Super Admin | `superadmin@kommandai.com` | `qwert12345` |
+| Shop Admin | `admin@kommandai.com` | `qwert12345` |
+| Customer | `customer@kommandai.com` | `qwert12345` |
 
 ## Get Gemini API Key
 
