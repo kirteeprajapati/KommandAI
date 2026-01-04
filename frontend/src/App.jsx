@@ -12,6 +12,114 @@ const ThemeToggle = ({ theme, toggleTheme }) => (
   </button>
 )
 
+// Voice recognition hook
+const useVoiceRecognition = (onResult, onError) => {
+  const [isListening, setIsListening] = useState(false)
+  const [isSupported, setIsSupported] = useState(false)
+  const recognitionRef = useRef(null)
+
+  useEffect(() => {
+    // Check for browser support
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (SpeechRecognition) {
+      setIsSupported(true)
+      const recognition = new SpeechRecognition()
+      recognition.continuous = false
+      recognition.interimResults = true
+      recognition.maxAlternatives = 1
+      // Support both Hindi and English
+      recognition.lang = 'hi-IN' // Primary: Hindi
+
+      recognition.onresult = (event) => {
+        const transcript = Array.from(event.results)
+          .map(result => result[0].transcript)
+          .join('')
+
+        if (event.results[0].isFinal) {
+          onResult(transcript)
+          setIsListening(false)
+        }
+      }
+
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error)
+        if (onError) onError(event.error)
+        setIsListening(false)
+      }
+
+      recognition.onend = () => {
+        setIsListening(false)
+      }
+
+      recognitionRef.current = recognition
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort()
+      }
+    }
+  }, [onResult, onError])
+
+  const startListening = useCallback(() => {
+    if (recognitionRef.current && !isListening) {
+      try {
+        recognitionRef.current.start()
+        setIsListening(true)
+      } catch (err) {
+        console.error('Failed to start recognition:', err)
+      }
+    }
+  }, [isListening])
+
+  const stopListening = useCallback(() => {
+    if (recognitionRef.current && isListening) {
+      recognitionRef.current.stop()
+      setIsListening(false)
+    }
+  }, [isListening])
+
+  const toggleListening = useCallback(() => {
+    if (isListening) {
+      stopListening()
+    } else {
+      startListening()
+    }
+  }, [isListening, startListening, stopListening])
+
+  return { isListening, isSupported, startListening, stopListening, toggleListening }
+}
+
+// Voice button component with SVG icons
+const VoiceButton = ({ isListening, isSupported, onClick, disabled }) => {
+  if (!isSupported) return null
+
+  return (
+    <button
+      type="button"
+      className={`voice-btn ${isListening ? 'listening' : ''}`}
+      onClick={onClick}
+      disabled={disabled}
+      title={isListening ? 'Listening... (click to stop)' : 'Click to speak (Hindi/English)'}
+    >
+      {isListening ? (
+        // Stop/recording icon
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" />
+        </svg>
+      ) : (
+        // Microphone icon
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+          <line x1="12" x2="12" y1="19" y2="22" />
+        </svg>
+      )}
+      {isListening && <span className="voice-pulse"></span>}
+    </button>
+  )
+}
+
 const getPasswordStrength = (password) => {
   if (!password) return { score: 0, label: '', color: '' }
 
@@ -123,6 +231,14 @@ function App() {
     address: '', city: '', pincode: '', gst_number: ''
   })
   const [editingShop, setEditingShop] = useState(null)
+  // Category detail view states
+  const [selectedAdminCategory, setSelectedAdminCategory] = useState(null)
+  const [categoryShops, setCategoryShops] = useState([])
+  const [categoryInfo, setCategoryInfo] = useState(null)
+  // Shop detail modal states
+  const [showShopDetailModal, setShowShopDetailModal] = useState(false)
+  const [shopDetailStats, setShopDetailStats] = useState(null)
+  const [loadingShopDetail, setLoadingShopDetail] = useState(false)
 
   // UI states
   const [isConnected, setIsConnected] = useState(false)
@@ -146,6 +262,27 @@ function App() {
 
   const wsRef = useRef(null)
   const observerRef = useRef(null)
+
+  // Voice recognition
+  const handleVoiceResult = useCallback((transcript) => {
+    setCommand(transcript)
+    addLog(`Voice: "${transcript}"`, 'info')
+  }, [])
+
+  const handleVoiceError = useCallback((error) => {
+    if (error === 'not-allowed') {
+      addLog('Microphone access denied. Please allow microphone access.', 'error')
+    } else if (error === 'no-speech') {
+      addLog('No speech detected. Try again.', 'info')
+    } else {
+      addLog(`Voice error: ${error}`, 'error')
+    }
+  }, [])
+
+  const { isListening, isSupported: voiceSupported, toggleListening } = useVoiceRecognition(
+    handleVoiceResult,
+    handleVoiceError
+  )
 
   // Infinite scroll callback
   const lastItemRef = useCallback(node => {
@@ -638,6 +775,48 @@ function App() {
       }
     } catch (err) { console.error('Error fetching users:', err) }
     finally { setIsLoading(false) }
+  }
+
+  const fetchCategoryShops = async (categoryId) => {
+    setIsLoading(true)
+    try {
+      const res = await fetch(`/api/shop-categories/${categoryId}/shops-with-stats`)
+      if (res.ok) {
+        const data = await res.json()
+        setCategoryInfo(data.category)
+        setCategoryShops(data.shops)
+      }
+    } catch (err) { console.error('Error fetching category shops:', err) }
+    finally { setIsLoading(false) }
+  }
+
+  const fetchShopDetailStats = async (shopId) => {
+    setLoadingShopDetail(true)
+    try {
+      const res = await fetch(`/api/shops/${shopId}/admin-stats`)
+      if (res.ok) {
+        const data = await res.json()
+        setShopDetailStats(data)
+        setShowShopDetailModal(true)
+      }
+    } catch (err) { console.error('Error fetching shop details:', err) }
+    finally { setLoadingShopDetail(false) }
+  }
+
+  const openCategoryDetail = (categoryId) => {
+    setSelectedAdminCategory(categoryId)
+    fetchCategoryShops(categoryId)
+  }
+
+  const closeCategoryDetail = () => {
+    setSelectedAdminCategory(null)
+    setCategoryShops([])
+    setCategoryInfo(null)
+  }
+
+  const closeShopDetailModal = () => {
+    setShowShopDetailModal(false)
+    setShopDetailStats(null)
   }
 
   const addLog = (message, type = 'info') => {
@@ -1163,7 +1342,8 @@ function App() {
             <div className="quick-actions">
               {quickActions.map((action, i) => (
                 <button key={i} className="quick-action-btn" onClick={() => handleQuickAction(action)} title={action.command}>
-                  {action.label}
+                  <span className="qa-label">{action.label}</span>
+                  {action.label_hi && <span className="qa-label-hi">{action.label_hi}</span>}
                 </button>
               ))}
             </div>
@@ -1178,9 +1358,15 @@ function App() {
                 onKeyDown={handleCommandKeyDown}
                 onFocus={() => command.trim() && suggestions.length > 0 && setShowSuggestions(true)}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                placeholder="Type a command or click quick actions above..."
+                placeholder={isListening ? "🎤 Listening... बोलिए" : "Type or speak... (Hindi/English दोनों चलेगा)"}
+                disabled={isProcessing || isListening}
+                className={`command-input ${isListening ? 'listening' : ''}`}
+              />
+              <VoiceButton
+                isListening={isListening}
+                isSupported={voiceSupported}
+                onClick={toggleListening}
                 disabled={isProcessing}
-                className="command-input"
               />
               <button type="submit" disabled={isProcessing || !command.trim()} className="command-btn">{isProcessing ? '...' : 'Go'}</button>
             </div>
@@ -1193,10 +1379,12 @@ function App() {
                     onClick={() => handleSuggestionSelect(s)}
                   >
                     <div className="suggestion-header">
-                      <span className="suggestion-category">{s.category}</span>
+                      <span className="suggestion-category">{s.category} {s.category_hi && `| ${s.category_hi}`}</span>
                       <span className="suggestion-command">{s.description}</span>
                     </div>
+                    <div className="suggestion-desc-hi">{s.description_hi}</div>
                     <div className="suggestion-example">{s.examples?.[0] || s.template}</div>
+                    {s.examples_hi?.[0] && <div className="suggestion-example-hi">{s.examples_hi[0]}</div>}
                   </div>
                 ))}
               </div>
@@ -1428,7 +1616,8 @@ function App() {
             <div className="quick-actions">
               {quickActions.map((action, i) => (
                 <button key={i} className="quick-action-btn" onClick={() => handleQuickAction(action)} title={action.command}>
-                  {action.label}
+                  <span className="qa-label">{action.label}</span>
+                  {action.label_hi && <span className="qa-label-hi">{action.label_hi}</span>}
                 </button>
               ))}
             </div>
@@ -1443,9 +1632,15 @@ function App() {
                 onKeyDown={handleCommandKeyDown}
                 onFocus={() => command.trim() && suggestions.length > 0 && setShowSuggestions(true)}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                placeholder="Tell me what to do... (e.g., 'list pending orders', 'restock product 5')"
+                placeholder={isListening ? "🎤 सुन रहा हूं... बोलिए" : "बोलो या टाइप करो... (Hindi/English दोनों चलेगा)"}
+                disabled={isProcessing || isListening}
+                className={`command-input ${isListening ? 'listening' : ''}`}
+              />
+              <VoiceButton
+                isListening={isListening}
+                isSupported={voiceSupported}
+                onClick={toggleListening}
                 disabled={isProcessing}
-                className="command-input"
               />
               <button type="submit" disabled={isProcessing || !command.trim()} className="command-btn">{isProcessing ? '...' : 'Go'}</button>
             </div>
@@ -1458,10 +1653,12 @@ function App() {
                     onClick={() => handleSuggestionSelect(s)}
                   >
                     <div className="suggestion-header">
-                      <span className="suggestion-category">{s.category}</span>
+                      <span className="suggestion-category">{s.category} {s.category_hi && `| ${s.category_hi}`}</span>
                       <span className="suggestion-command">{s.description}</span>
                     </div>
+                    <div className="suggestion-desc-hi">{s.description_hi}</div>
                     <div className="suggestion-example">{s.examples?.[0] || s.template}</div>
+                    {s.examples_hi?.[0] && <div className="suggestion-example-hi">{s.examples_hi[0]}</div>}
                   </div>
                 ))}
               </div>
@@ -1658,7 +1855,8 @@ function App() {
             <div className="quick-actions">
               {quickActions.map((action, i) => (
                 <button key={i} className="quick-action-btn" onClick={() => handleQuickAction(action)} title={action.command}>
-                  {action.label}
+                  <span className="qa-label">{action.label}</span>
+                  {action.label_hi && <span className="qa-label-hi">{action.label_hi}</span>}
                 </button>
               ))}
             </div>
@@ -1673,9 +1871,15 @@ function App() {
                 onKeyDown={handleCommandKeyDown}
                 onFocus={() => command.trim() && suggestions.length > 0 && setShowSuggestions(true)}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                placeholder="Search products, shops... (e.g., 'search phones')"
+                placeholder={isListening ? "🎤 सुन रहा हूं..." : "खोजो या बोलो... (Hindi/English)"}
+                disabled={isProcessing || isListening}
+                className={`command-input ${isListening ? 'listening' : ''}`}
+              />
+              <VoiceButton
+                isListening={isListening}
+                isSupported={voiceSupported}
+                onClick={toggleListening}
                 disabled={isProcessing}
-                className="command-input"
               />
               <button type="submit" disabled={isProcessing || !command.trim()} className="command-btn">{isProcessing ? '...' : 'Go'}</button>
             </div>
@@ -1688,10 +1892,12 @@ function App() {
                     onClick={() => handleSuggestionSelect(s)}
                   >
                     <div className="suggestion-header">
-                      <span className="suggestion-category">{s.category}</span>
+                      <span className="suggestion-category">{s.category} {s.category_hi && `| ${s.category_hi}`}</span>
                       <span className="suggestion-command">{s.description}</span>
                     </div>
+                    <div className="suggestion-desc-hi">{s.description_hi}</div>
                     <div className="suggestion-example">{s.examples?.[0] || s.template}</div>
+                    {s.examples_hi?.[0] && <div className="suggestion-example-hi">{s.examples_hi[0]}</div>}
                   </div>
                 ))}
               </div>

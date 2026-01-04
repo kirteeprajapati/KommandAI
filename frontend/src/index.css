@@ -650,6 +650,93 @@ body {
 }
 .command-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* Voice Button */
+.voice-btn {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  background: var(--accent-gradient);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  color: white;
+}
+
+.voice-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.voice-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.voice-btn.listening {
+  background: var(--danger);
+  animation: pulse-bg 1s ease-in-out infinite;
+}
+
+.voice-icon {
+  font-size: 1.2rem;
+  z-index: 1;
+}
+
+.voice-pulse {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  background: var(--danger);
+  opacity: 0.3;
+  animation: pulse-wave 1.2s ease-out infinite;
+}
+
+@keyframes pulse-wave {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes pulse-bg {
+  0%, 100% {
+    background: var(--danger);
+  }
+  50% {
+    background: #f87171;
+  }
+}
+
+/* Command input listening state */
+.command-input.listening {
+  border-color: var(--danger) !important;
+  background: var(--danger-bg);
+}
+
+/* Listening indicator text */
+.listening-text {
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 500;
+  margin-left: 8px;
+  animation: fade-pulse 1s ease-in-out infinite;
+}
+
+@keyframes fade-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 /* Quick Actions */
 .quick-actions {
   display: flex;
@@ -668,12 +755,27 @@ body {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
 }
 
 .quick-action-btn:hover {
   background: rgba(59, 130, 246, 0.2);
   border-color: var(--accent-primary);
   transform: translateY(-1px);
+}
+
+/* Bilingual Quick Action Labels */
+.qa-label {
+  font-weight: 600;
+}
+
+.qa-label-hi {
+  font-size: 0.7rem;
+  color: var(--accent-secondary);
+  opacity: 0.85;
 }
 
 /* Command Suggestions Dropdown */
@@ -744,6 +846,25 @@ body {
   background: var(--bg-tertiary);
   border-radius: 6px;
   margin-top: 8px;
+}
+
+/* Hindi suggestion labels */
+.suggestion-desc-hi {
+  font-size: 0.85rem;
+  color: var(--accent-secondary);
+  margin-top: 2px;
+  font-style: italic;
+}
+
+.suggestion-example-hi {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  font-family: 'Monaco', 'Menlo', monospace;
+  padding: 4px 10px;
+  background: rgba(139, 92, 246, 0.1);
+  border-radius: 4px;
+  margin-top: 4px;
+  border-left: 2px solid var(--accent-secondary);
 }
 
 /* Stats Grid */
