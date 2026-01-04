@@ -12,72 +12,105 @@ const ThemeToggle = ({ theme, toggleTheme }) => (
   </button>
 )
 
-// Voice recognition hook
-const useVoiceRecognition = (onResult, onError) => {
+// Voice recognition hook - simplified and more robust
+const useVoiceRecognition = () => {
   const [isListening, setIsListening] = useState(false)
   const [isSupported, setIsSupported] = useState(false)
+  const [transcript, setTranscript] = useState('')
+  const [error, setError] = useState(null)
   const recognitionRef = useRef(null)
 
+  // Initialize speech recognition once
   useEffect(() => {
-    // Check for browser support
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (SpeechRecognition) {
-      setIsSupported(true)
-      const recognition = new SpeechRecognition()
-      recognition.continuous = false
-      recognition.interimResults = true
-      recognition.maxAlternatives = 1
-      // Support both Hindi and English
-      recognition.lang = 'hi-IN' // Primary: Hindi
 
-      recognition.onresult = (event) => {
-        const transcript = Array.from(event.results)
-          .map(result => result[0].transcript)
-          .join('')
+    if (!SpeechRecognition) {
+      console.log('Speech recognition not supported')
+      setIsSupported(false)
+      return
+    }
 
-        if (event.results[0].isFinal) {
-          onResult(transcript)
-          setIsListening(false)
+    setIsSupported(true)
+    const recognition = new SpeechRecognition()
+
+    // Configuration
+    recognition.continuous = false  // Stop after one result
+    recognition.interimResults = true
+    recognition.lang = 'en-IN'  // English-India (supports Hindi too)
+
+    recognition.onstart = () => {
+      console.log('🎤 Recognition started')
+      setIsListening(true)
+      setError(null)
+      setTranscript('')
+    }
+
+    recognition.onresult = (event) => {
+      console.log('🎤 Got result:', event.results)
+      let finalText = ''
+      let interimText = ''
+
+      for (let i = 0; i < event.results.length; i++) {
+        const result = event.results[i]
+        if (result.isFinal) {
+          finalText += result[0].transcript
+        } else {
+          interimText += result[0].transcript
         }
       }
 
-      recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error)
-        if (onError) onError(event.error)
-        setIsListening(false)
-      }
-
-      recognition.onend = () => {
-        setIsListening(false)
-      }
-
-      recognitionRef.current = recognition
+      // Update transcript with whatever we have
+      setTranscript(finalText || interimText)
+      console.log('🎤 Transcript:', finalText || interimText)
     }
+
+    recognition.onerror = (event) => {
+      console.error('🎤 Error:', event.error)
+      setError(event.error)
+      setIsListening(false)
+    }
+
+    recognition.onend = () => {
+      console.log('🎤 Recognition ended')
+      setIsListening(false)
+    }
+
+    recognitionRef.current = recognition
 
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.abort()
       }
     }
-  }, [onResult, onError])
+  }, [])
 
   const startListening = useCallback(() => {
-    if (recognitionRef.current && !isListening) {
-      try {
-        recognitionRef.current.start()
-        setIsListening(true)
-      } catch (err) {
-        console.error('Failed to start recognition:', err)
+    if (!recognitionRef.current) {
+      console.log('🎤 Recognition not available')
+      return
+    }
+
+    // Reset state
+    setTranscript('')
+    setError(null)
+
+    try {
+      recognitionRef.current.start()
+      console.log('🎤 Starting...')
+    } catch (err) {
+      console.error('🎤 Start failed:', err)
+      // Already started? Stop and restart
+      if (err.name === 'InvalidStateError') {
+        recognitionRef.current.stop()
       }
     }
-  }, [isListening])
+  }, [])
 
   const stopListening = useCallback(() => {
-    if (recognitionRef.current && isListening) {
+    if (recognitionRef.current) {
       recognitionRef.current.stop()
-      setIsListening(false)
     }
-  }, [isListening])
+  }, [])
 
   const toggleListening = useCallback(() => {
     if (isListening) {
@@ -87,7 +120,15 @@ const useVoiceRecognition = (onResult, onError) => {
     }
   }, [isListening, startListening, stopListening])
 
-  return { isListening, isSupported, startListening, stopListening, toggleListening }
+  return {
+    isListening,
+    isSupported,
+    transcript,
+    error,
+    startListening,
+    stopListening,
+    toggleListening
+  }
 }
 
 // Voice button component with SVG icons
@@ -264,25 +305,35 @@ function App() {
   const observerRef = useRef(null)
 
   // Voice recognition
-  const handleVoiceResult = useCallback((transcript) => {
-    setCommand(transcript)
-    addLog(`Voice: "${transcript}"`, 'info')
-  }, [])
+  const {
+    isListening,
+    isSupported: voiceSupported,
+    transcript: voiceTranscript,
+    error: voiceError,
+    toggleListening
+  } = useVoiceRecognition()
 
-  const handleVoiceError = useCallback((error) => {
-    if (error === 'not-allowed') {
-      addLog('Microphone access denied. Please allow microphone access.', 'error')
-    } else if (error === 'no-speech') {
-      addLog('No speech detected. Try again.', 'info')
-    } else {
-      addLog(`Voice error: ${error}`, 'error')
+  // Update command when voice transcript changes
+  useEffect(() => {
+    if (voiceTranscript) {
+      setCommand(voiceTranscript)
     }
-  }, [])
+  }, [voiceTranscript])
 
-  const { isListening, isSupported: voiceSupported, toggleListening } = useVoiceRecognition(
-    handleVoiceResult,
-    handleVoiceError
-  )
+  // Log voice errors
+  useEffect(() => {
+    if (voiceError) {
+      if (voiceError === 'not-allowed') {
+        addLog('🎤 Microphone access denied. Please allow in browser settings.', 'error')
+      } else if (voiceError === 'network') {
+        addLog('🎤 Network error. Speech recognition requires internet.', 'error')
+      } else if (voiceError === 'audio-capture') {
+        addLog('🎤 No microphone found.', 'error')
+      } else if (voiceError !== 'aborted' && voiceError !== 'no-speech') {
+        addLog(`🎤 Voice error: ${voiceError}`, 'error')
+      }
+    }
+  }, [voiceError])
 
   // Infinite scroll callback
   const lastItemRef = useCallback(node => {
@@ -1358,8 +1409,8 @@ function App() {
                 onKeyDown={handleCommandKeyDown}
                 onFocus={() => command.trim() && suggestions.length > 0 && setShowSuggestions(true)}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                placeholder={isListening ? "🎤 Listening... बोलिए" : "Type or speak... (Hindi/English दोनों चलेगा)"}
-                disabled={isProcessing || isListening}
+                placeholder={isListening ? "🎤 Listening... speak now" : "Type or speak... (Hindi/English दोनों चलेगा)"}
+                disabled={isProcessing}
                 className={`command-input ${isListening ? 'listening' : ''}`}
               />
               <VoiceButton
@@ -1579,14 +1630,239 @@ function App() {
 
         {superAdminTab === 'categories' && (
           <div className="data-panel">
-            <h2>Shop Categories</h2>
-            <div className="categories-admin">
-              {shopCategories.map(cat => (
-                <div key={cat.id} className="category-admin-card">
-                  <span className="cat-icon">{cat.icon}</span>
-                  <div className="cat-info"><h3>{cat.name}</h3><p>{cat.description}</p><span className="shop-count">{cat.shop_count} shops</span></div>
+            {selectedAdminCategory && categoryInfo ? (
+              // Category Detail View
+              <div className="category-detail-view">
+                <div className="category-detail-header">
+                  <button className="back-btn" onClick={closeCategoryDetail}>← Back to Categories</button>
+                  <div className="category-title">
+                    <span className="cat-icon-large">{categoryInfo.icon}</span>
+                    <div>
+                      <h2>{categoryInfo.name}</h2>
+                      <p>{categoryInfo.description}</p>
+                    </div>
+                  </div>
                 </div>
-              ))}
+
+                <div className="category-stats-bar">
+                  <div className="cat-stat"><span className="cat-stat-value">{categoryShops.length}</span><span className="cat-stat-label">Total Shops</span></div>
+                  <div className="cat-stat"><span className="cat-stat-value">{categoryShops.filter(s => s.is_active).length}</span><span className="cat-stat-label">Active</span></div>
+                  <div className="cat-stat"><span className="cat-stat-value">{categoryShops.filter(s => s.is_verified).length}</span><span className="cat-stat-label">Verified</span></div>
+                  <div className="cat-stat success"><span className="cat-stat-value">₹{categoryShops.reduce((sum, s) => sum + (s.stats?.total_revenue || 0), 0).toLocaleString()}</span><span className="cat-stat-label">Total Revenue</span></div>
+                  <div className="cat-stat profit"><span className="cat-stat-value">₹{categoryShops.reduce((sum, s) => sum + (s.stats?.total_profit || 0), 0).toLocaleString()}</span><span className="cat-stat-label">Total Profit</span></div>
+                </div>
+
+                <h3>Shops in {categoryInfo.name}</h3>
+                <div className="data-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Shop Name</th>
+                        <th>Owner</th>
+                        <th>City</th>
+                        <th>Rating</th>
+                        <th>Orders</th>
+                        <th>Revenue</th>
+                        <th>Profit</th>
+                        <th>Margin</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {categoryShops.map(shop => (
+                        <tr key={shop.id} className={!shop.is_active ? 'suspended' : ''}>
+                          <td>
+                            <div className="shop-cell">
+                              <strong>{shop.name}</strong>
+                              {shop.is_verified && <span className="verified-badge">✓</span>}
+                            </div>
+                          </td>
+                          <td>
+                            <div className="owner-cell">
+                              <span className="owner-name">{shop.owner_name || '-'}</span>
+                              <span className="owner-email">{shop.owner_email || '-'}</span>
+                            </div>
+                          </td>
+                          <td>{shop.city || '-'}</td>
+                          <td><span className="rating-badge">★ {shop.rating?.toFixed(1) || '-'}</span></td>
+                          <td>{shop.stats?.total_orders || 0}</td>
+                          <td className="revenue">₹{(shop.stats?.total_revenue || 0).toLocaleString()}</td>
+                          <td className={`profit ${(shop.stats?.total_profit || 0) >= 0 ? 'positive' : 'negative'}`}>
+                            ₹{(shop.stats?.total_profit || 0).toLocaleString()}
+                          </td>
+                          <td className={`margin ${(shop.stats?.profit_margin || 0) > 20 ? 'good' : (shop.stats?.profit_margin || 0) > 0 ? 'ok' : 'low'}`}>
+                            {shop.stats?.profit_margin || 0}%
+                          </td>
+                          <td>
+                            <span className={`status ${shop.is_active ? 'active' : 'suspended'}`}>
+                              {shop.is_active ? 'Active' : 'Suspended'}
+                            </span>
+                          </td>
+                          <td>
+                            <button className="view-btn" onClick={() => fetchShopDetailStats(shop.id)} disabled={loadingShopDetail}>
+                              {loadingShopDetail ? '...' : 'View Details'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {categoryShops.length === 0 && <p className="empty">No shops in this category</p>}
+              </div>
+            ) : (
+              // Categories Grid
+              <>
+                <h2>Shop Categories</h2>
+                <p className="subtitle">Click on a category to view all shops and their performance metrics</p>
+                <div className="categories-admin clickable">
+                  {shopCategories.map(cat => (
+                    <div key={cat.id} className="category-admin-card" onClick={() => openCategoryDetail(cat.id)}>
+                      <span className="cat-icon">{cat.icon}</span>
+                      <div className="cat-info">
+                        <h3>{cat.name}</h3>
+                        <p>{cat.description}</p>
+                        <span className="shop-count">{cat.shop_count} shops</span>
+                      </div>
+                      <span className="view-arrow">→</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Shop Detail Modal */}
+        {showShopDetailModal && shopDetailStats && (
+          <div className="modal-overlay" onClick={closeShopDetailModal}>
+            <div className="shop-detail-modal" onClick={e => e.stopPropagation()}>
+              <button className="modal-close" onClick={closeShopDetailModal}>×</button>
+
+              <div className="shop-modal-header">
+                <div className="shop-info-main">
+                  <span className="cat-icon-large">{shopDetailStats.shop.category_icon || '🏪'}</span>
+                  <div>
+                    <h2>{shopDetailStats.shop.name}</h2>
+                    <p className="shop-category">{shopDetailStats.shop.category || 'Uncategorized'}</p>
+                    <div className="shop-badges">
+                      {shopDetailStats.shop.is_verified && <span className="badge verified">Verified</span>}
+                      <span className={`badge ${shopDetailStats.shop.is_active ? 'active' : 'suspended'}`}>
+                        {shopDetailStats.shop.is_active ? 'Active' : 'Suspended'}
+                      </span>
+                      <span className="badge rating">★ {shopDetailStats.shop.rating?.toFixed(1)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="shop-modal-stats">
+                <div className="stats-section">
+                  <h3>Financial Overview</h3>
+                  <div className="stats-grid-modal">
+                    <div className="stat-box revenue">
+                      <span className="stat-label">Total Revenue</span>
+                      <span className="stat-value">₹{shopDetailStats.financials.total_revenue.toLocaleString()}</span>
+                    </div>
+                    <div className="stat-box cost">
+                      <span className="stat-label">Total Cost</span>
+                      <span className="stat-value">₹{shopDetailStats.financials.total_cost.toLocaleString()}</span>
+                    </div>
+                    <div className="stat-box profit">
+                      <span className="stat-label">Total Profit</span>
+                      <span className="stat-value">₹{shopDetailStats.financials.total_profit.toLocaleString()}</span>
+                    </div>
+                    <div className="stat-box margin">
+                      <span className="stat-label">Profit Margin</span>
+                      <span className="stat-value">{shopDetailStats.financials.profit_margin}%</span>
+                    </div>
+                    <div className="stat-box">
+                      <span className="stat-label">Total Orders</span>
+                      <span className="stat-value">{shopDetailStats.total_orders}</span>
+                    </div>
+                    <div className="stat-box">
+                      <span className="stat-label">Avg Order Value</span>
+                      <span className="stat-value">₹{shopDetailStats.financials.avg_order_value.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="stats-row">
+                  <div className="stats-section half">
+                    <h3>Today's Performance</h3>
+                    <div className="today-stats">
+                      <div><span>Orders:</span><strong>{shopDetailStats.today.orders}</strong></div>
+                      <div><span>Revenue:</span><strong>₹{shopDetailStats.today.revenue.toLocaleString()}</strong></div>
+                      <div><span>Profit:</span><strong className="profit positive">₹{shopDetailStats.today.profit.toLocaleString()}</strong></div>
+                    </div>
+                  </div>
+                  <div className="stats-section half">
+                    <h3>This Month</h3>
+                    <div className="month-stats">
+                      <div><span>Orders:</span><strong>{shopDetailStats.this_month.orders}</strong></div>
+                      <div><span>Revenue:</span><strong>₹{shopDetailStats.this_month.revenue.toLocaleString()}</strong></div>
+                      <div><span>Growth:</span><strong className={shopDetailStats.this_month.revenue_growth >= 0 ? 'positive' : 'negative'}>
+                        {shopDetailStats.this_month.revenue_growth >= 0 ? '+' : ''}{shopDetailStats.this_month.revenue_growth}%
+                      </strong></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="stats-section">
+                  <h3>Inventory</h3>
+                  <div className="inventory-stats">
+                    <div><span>Total Products:</span><strong>{shopDetailStats.products.total}</strong></div>
+                    <div><span>Active:</span><strong>{shopDetailStats.products.active}</strong></div>
+                    <div><span>Low Stock:</span><strong className="warning">{shopDetailStats.products.low_stock}</strong></div>
+                    <div><span>Out of Stock:</span><strong className="danger">{shopDetailStats.products.out_of_stock}</strong></div>
+                    <div><span>Inventory Value:</span><strong>₹{shopDetailStats.products.inventory_value.toLocaleString()}</strong></div>
+                  </div>
+                </div>
+
+                {shopDetailStats.top_products.length > 0 && (
+                  <div className="stats-section">
+                    <h3>Top Selling Products</h3>
+                    <table className="top-products-table">
+                      <thead>
+                        <tr><th>Product</th><th>Units Sold</th><th>Revenue</th><th>Profit</th></tr>
+                      </thead>
+                      <tbody>
+                        {shopDetailStats.top_products.map((p, i) => (
+                          <tr key={i}>
+                            <td>{p.name}</td>
+                            <td>{p.units_sold}</td>
+                            <td>₹{p.revenue.toLocaleString()}</td>
+                            <td className="profit positive">₹{p.profit.toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                <div className="stats-section">
+                  <h3>Owner Information</h3>
+                  <div className="owner-info">
+                    <div><span>Name:</span><strong>{shopDetailStats.shop.owner_name || '-'}</strong></div>
+                    <div><span>Email:</span><strong>{shopDetailStats.shop.owner_email || '-'}</strong></div>
+                    <div><span>Phone:</span><strong>{shopDetailStats.shop.owner_phone || '-'}</strong></div>
+                    <div><span>Address:</span><strong>{shopDetailStats.shop.address || '-'}, {shopDetailStats.shop.city || ''} {shopDetailStats.shop.pincode || ''}</strong></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-actions">
+                {!shopDetailStats.shop.is_verified && (
+                  <button className="verify-btn" onClick={() => { verifyShop(shopDetailStats.shop.id); closeShopDetailModal(); }}>Verify Shop</button>
+                )}
+                {shopDetailStats.shop.is_active ? (
+                  <button className="suspend-btn" onClick={() => { suspendShop(shopDetailStats.shop.id); closeShopDetailModal(); }}>Suspend Shop</button>
+                ) : (
+                  <button className="activate-btn" onClick={() => { activateShop(shopDetailStats.shop.id); closeShopDetailModal(); }}>Activate Shop</button>
+                )}
+                <button className="edit-btn" onClick={() => { startEditShop(shopDetailStats.shop); closeShopDetailModal(); }}>Edit Shop</button>
+              </div>
             </div>
           </div>
         )}
@@ -1633,7 +1909,7 @@ function App() {
                 onFocus={() => command.trim() && suggestions.length > 0 && setShowSuggestions(true)}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                 placeholder={isListening ? "🎤 सुन रहा हूं... बोलिए" : "बोलो या टाइप करो... (Hindi/English दोनों चलेगा)"}
-                disabled={isProcessing || isListening}
+                disabled={isProcessing}
                 className={`command-input ${isListening ? 'listening' : ''}`}
               />
               <VoiceButton
@@ -1872,7 +2148,7 @@ function App() {
                 onFocus={() => command.trim() && suggestions.length > 0 && setShowSuggestions(true)}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                 placeholder={isListening ? "🎤 सुन रहा हूं..." : "खोजो या बोलो... (Hindi/English)"}
-                disabled={isProcessing || isListening}
+                disabled={isProcessing}
                 className={`command-input ${isListening ? 'listening' : ''}`}
               />
               <VoiceButton
