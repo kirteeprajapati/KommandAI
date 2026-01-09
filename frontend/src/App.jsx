@@ -18,31 +18,41 @@ const useVoiceRecognition = () => {
   const [isSupported, setIsSupported] = useState(false)
   const [transcript, setTranscript] = useState('')
   const [error, setError] = useState(null)
+  const [statusMessage, setStatusMessage] = useState('')
   const recognitionRef = useRef(null)
 
   // Initialize speech recognition once
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
 
+    console.log('🎤 Checking speech recognition support...')
+    console.log('🎤 SpeechRecognition:', !!window.SpeechRecognition)
+    console.log('🎤 webkitSpeechRecognition:', !!window.webkitSpeechRecognition)
+    console.log('🎤 User Agent:', navigator.userAgent)
+
     if (!SpeechRecognition) {
-      console.log('Speech recognition not supported')
+      console.log('🎤 Speech recognition NOT supported in this browser')
       setIsSupported(false)
+      setStatusMessage('Voice not supported in this browser.')
       return
     }
 
+    console.log('🎤 Speech recognition IS supported!')
     setIsSupported(true)
     const recognition = new SpeechRecognition()
 
-    // Configuration
+    // Configuration for better Hindi/English recognition
     recognition.continuous = false  // Stop after one result
     recognition.interimResults = true
-    recognition.lang = 'en-IN'  // English-India (supports Hindi too)
+    recognition.maxAlternatives = 3  // Get multiple alternatives for better accuracy
+    recognition.lang = 'en-US'  // Use English-US for better compatibility
 
     recognition.onstart = () => {
       console.log('🎤 Recognition started')
       setIsListening(true)
       setError(null)
       setTranscript('')
+      setStatusMessage('🎤 Listening... Speak now (Hindi/English)')
     }
 
     recognition.onresult = (event) => {
@@ -68,11 +78,35 @@ const useVoiceRecognition = () => {
       console.error('🎤 Error:', event.error)
       setError(event.error)
       setIsListening(false)
+
+      // Set user-friendly error messages
+      switch(event.error) {
+        case 'not-allowed':
+          setStatusMessage('❌ Microphone access denied. Click the mic icon in browser address bar to allow.')
+          break
+        case 'no-speech':
+          setStatusMessage('🔇 No speech detected. Please try again and speak clearly.')
+          break
+        case 'audio-capture':
+          setStatusMessage('❌ No microphone found. Please connect a microphone.')
+          break
+        case 'network':
+          setStatusMessage('❌ Network error. Speech recognition needs internet.')
+          break
+        case 'aborted':
+          setStatusMessage('')  // User cancelled, no message needed
+          break
+        default:
+          setStatusMessage(`❌ Voice error: ${event.error}`)
+      }
     }
 
     recognition.onend = () => {
       console.log('🎤 Recognition ended')
       setIsListening(false)
+      if (!error) {
+        setStatusMessage('')
+      }
     }
 
     recognitionRef.current = recognition
@@ -84,24 +118,47 @@ const useVoiceRecognition = () => {
     }
   }, [])
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     if (!recognitionRef.current) {
       console.log('🎤 Recognition not available')
+      setStatusMessage('❌ Voice recognition not initialized')
+      return
+    }
+
+    // First, request microphone permission explicitly
+    try {
+      console.log('🎤 Requesting microphone permission...')
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      console.log('🎤 Microphone permission granted!')
+      stream.getTracks().forEach(track => track.stop()) // Stop the stream, we just needed permission
+    } catch (permErr) {
+      console.error('🎤 Microphone permission denied:', permErr)
+      setStatusMessage('❌ Microphone access denied. Please allow microphone in browser settings.')
+      setError('not-allowed')
       return
     }
 
     // Reset state
     setTranscript('')
     setError(null)
+    setStatusMessage('🎤 Starting...')
 
     try {
       recognitionRef.current.start()
-      console.log('🎤 Starting...')
+      console.log('🎤 Recognition starting...')
     } catch (err) {
       console.error('🎤 Start failed:', err)
+      setStatusMessage(`❌ Failed to start: ${err.message}`)
       // Already started? Stop and restart
       if (err.name === 'InvalidStateError') {
         recognitionRef.current.stop()
+        setTimeout(() => {
+          try {
+            recognitionRef.current.start()
+          } catch (e) {
+            console.error('🎤 Retry failed:', e)
+          }
+        }, 100)
       }
     }
   }, [])
@@ -125,6 +182,7 @@ const useVoiceRecognition = () => {
     isSupported,
     transcript,
     error,
+    statusMessage,
     startListening,
     stopListening,
     toggleListening
@@ -133,7 +191,24 @@ const useVoiceRecognition = () => {
 
 // Voice button component with SVG icons
 const VoiceButton = ({ isListening, isSupported, onClick, disabled }) => {
-  if (!isSupported) return null
+  if (!isSupported) {
+    return (
+      <button
+        type="button"
+        className="voice-btn"
+        style={{ opacity: 0.4, cursor: 'not-allowed' }}
+        onClick={() => alert('Voice recognition is not supported in this browser.\n\nPlease use Chrome, Edge, or Arc browser.')}
+        title="Voice not supported in this browser"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+          <line x1="12" x2="12" y1="19" y2="22" />
+          <line x1="3" x2="21" y1="3" y2="21" stroke="#ef4444" strokeWidth="2" />
+        </svg>
+      </button>
+    )
+  }
 
   return (
     <button
@@ -209,7 +284,8 @@ function App() {
   const [loginLoading, setLoginLoading] = useState(false)
   const [loginError, setLoginError] = useState('')
   const [showRegister, setShowRegister] = useState(false)
-  const [registerForm, setRegisterForm] = useState({ name: '', email: '', password: '', phone: '' })
+  const [registerForm, setRegisterForm] = useState({ name: '', email: '', password: '', phone: '', shop_id: '' })
+  const [registerShops, setRegisterShops] = useState([])
   const [registerLoading, setRegisterLoading] = useState(false)
   const [showLoginPassword, setShowLoginPassword] = useState(false)
   const [showRegisterPassword, setShowRegisterPassword] = useState(false)
@@ -297,9 +373,16 @@ function App() {
     name: '', description: '', brand: '', sku: '', barcode: '',
     price: '', cost_price: '', min_price: '', compare_at_price: '',
     quantity: '', min_stock_level: '5', category_id: '',
-    tags: '', unit: 'piece', is_featured: false
+    tags: '', unit: 'piece', is_featured: false,
+    is_perishable: false, expiry_date: '', clearance_discount: '20'
   })
+  const [expiringProducts, setExpiringProducts] = useState([])
+  const [clearanceProducts, setClearanceProducts] = useState([])
   const [editingProduct, setEditingProduct] = useState(null)
+
+  // Hot Deals for customer landing page
+  const [hotDeals, setHotDeals] = useState([])
+  const [hotDealsLoading, setHotDealsLoading] = useState(false)
 
   const wsRef = useRef(null)
   const observerRef = useRef(null)
@@ -310,6 +393,7 @@ function App() {
     isSupported: voiceSupported,
     transcript: voiceTranscript,
     error: voiceError,
+    statusMessage: voiceStatus,
     toggleListening
   } = useVoiceRecognition()
 
@@ -350,6 +434,7 @@ function App() {
   useEffect(() => {
     connectWebSocket()
     fetchShopCategories()
+    fetchHotDeals()  // Fetch clearance deals for landing page
     // Check localStorage first (remember me), then sessionStorage
     const savedUser = localStorage.getItem('kommandai_user') || sessionStorage.getItem('kommandai_user')
     if (savedUser) {
@@ -357,6 +442,16 @@ function App() {
     }
     return () => { if (wsRef.current) wsRef.current.close() }
   }, [])
+
+  // Fetch shops for registration dropdown
+  useEffect(() => {
+    if (showRegister) {
+      fetch('/api/shops?limit=100&verified_only=true')
+        .then(res => res.json())
+        .then(data => setRegisterShops(data.shops || data || []))
+        .catch(() => setRegisterShops([]))
+    }
+  }, [showRegister])
 
   useEffect(() => {
     if (selectedShopCategory) {
@@ -523,10 +618,14 @@ function App() {
     setLoginError('')
     setRegisterLoading(true)
     try {
+      const payload = {
+        ...registerForm,
+        shop_id: registerForm.shop_id ? parseInt(registerForm.shop_id) : null
+      }
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(registerForm)
+        body: JSON.stringify(payload)
       })
       if (res.ok) {
         const data = await res.json()
@@ -653,6 +752,29 @@ function App() {
     } catch (err) { console.error('Error fetching quick actions:', err) }
   }
 
+  // Fetch hot deals (clearance products) for customer landing page
+  const fetchHotDeals = async () => {
+    setHotDealsLoading(true)
+    try {
+      const res = await fetch('/api/products/clearance')
+      if (res.ok) {
+        const data = await res.json()
+        // Get shop names for each deal
+        const dealsWithShops = await Promise.all(data.slice(0, 12).map(async (deal) => {
+          try {
+            const shopRes = await fetch(`/api/shops/${deal.shop_id}`)
+            const shop = shopRes.ok ? await shopRes.json() : null
+            return { ...deal, shop_name: shop?.name || 'Local Shop' }
+          } catch {
+            return { ...deal, shop_name: 'Local Shop' }
+          }
+        }))
+        setHotDeals(dealsWithShops)
+      }
+    } catch (err) { console.error('Error fetching hot deals:', err) }
+    setHotDealsLoading(false)
+  }
+
   const handleSuggestionSelect = (suggestion) => {
     // Use the first example as the command template
     if (suggestion.examples && suggestion.examples.length > 0) {
@@ -722,14 +844,18 @@ function App() {
 
   const fetchAdminDashboard = async (shopId) => {
     try {
-      const [dashRes, lowRes, catRes] = await Promise.all([
+      const [dashRes, lowRes, catRes, expiryRes, clearanceRes] = await Promise.all([
         fetch(`/api/shops/${shopId}/dashboard`),
         fetch(`/api/shops/${shopId}/low-stock`),
-        fetch('/api/categories')
+        fetch('/api/categories'),
+        fetch(`/api/shops/${shopId}/expiring-soon`),
+        fetch(`/api/shops/${shopId}/clearance`)
       ])
       if (dashRes.ok) setDashboardStats(await dashRes.json())
       if (lowRes.ok) setLowStockProducts(await lowRes.json())
       if (catRes.ok) setCategories(await catRes.json())
+      if (expiryRes.ok) setExpiringProducts(await expiryRes.json())
+      if (clearanceRes.ok) setClearanceProducts(await clearanceRes.json())
     } catch (err) { console.error('Error fetching dashboard:', err) }
   }
 
@@ -950,7 +1076,10 @@ function App() {
         category_id: productForm.category_id ? parseInt(productForm.category_id) : null,
         tags: productForm.tags || null,
         unit: productForm.unit,
-        is_featured: productForm.is_featured
+        is_featured: productForm.is_featured,
+        is_perishable: productForm.is_perishable,
+        expiry_date: productForm.expiry_date ? new Date(productForm.expiry_date).toISOString() : null,
+        clearance_discount: parseFloat(productForm.clearance_discount) || 20
       }
       const res = await fetch('/api/products', {
         method: 'POST',
@@ -986,7 +1115,10 @@ function App() {
         category_id: productForm.category_id ? parseInt(productForm.category_id) : null,
         tags: productForm.tags || null,
         unit: productForm.unit,
-        is_featured: productForm.is_featured
+        is_featured: productForm.is_featured,
+        is_perishable: productForm.is_perishable,
+        expiry_date: productForm.expiry_date ? new Date(productForm.expiry_date).toISOString() : null,
+        clearance_discount: parseFloat(productForm.clearance_discount) || 20
       }
       const res = await fetch(`/api/products/${editingProduct.id}`, {
         method: 'PUT',
@@ -1021,7 +1153,10 @@ function App() {
       compare_at_price: p.compare_at_price?.toString() || '',
       quantity: p.quantity.toString(), min_stock_level: p.min_stock_level.toString(),
       category_id: p.category_id?.toString() || '', tags: p.tags || '',
-      unit: p.unit, is_featured: p.is_featured
+      unit: p.unit, is_featured: p.is_featured,
+      is_perishable: p.is_perishable || false,
+      expiry_date: p.expiry_date ? p.expiry_date.split('T')[0] : '',
+      clearance_discount: p.clearance_discount?.toString() || '20'
     })
     setActiveTab('products')
   }
@@ -1031,7 +1166,8 @@ function App() {
       name: '', description: '', brand: '', sku: '', barcode: '',
       price: '', cost_price: '', min_price: '', compare_at_price: '',
       quantity: '', min_stock_level: '5', category_id: '',
-      tags: '', unit: 'piece', is_featured: false
+      tags: '', unit: 'piece', is_featured: false,
+      is_perishable: false, expiry_date: '', clearance_discount: '20'
     })
     setEditingProduct(null)
   }
@@ -1297,6 +1433,18 @@ function App() {
                 <input type="tel" value={registerForm.phone} onChange={e => setRegisterForm({...registerForm, phone: e.target.value})} />
               </div>
               <div className="form-group">
+                <label>Link to Shop (Optional)</label>
+                <select value={registerForm.shop_id} onChange={e => setRegisterForm({...registerForm, shop_id: e.target.value})}>
+                  <option value="">-- No Shop (Customer only) --</option>
+                  {registerShops.map(shop => (
+                    <option key={shop.id} value={shop.id}>{shop.name} - {shop.city}</option>
+                  ))}
+                </select>
+                <small style={{color: 'var(--text-muted)', fontSize: '12px', marginTop: '4px', display: 'block'}}>
+                  Select a shop if you're a staff member of that shop
+                </small>
+              </div>
+              <div className="form-group">
                 <label>Password</label>
                 <div className="password-input-wrapper">
                   <input type={showRegisterPassword ? "text" : "password"} value={registerForm.password} onChange={e => setRegisterForm({...registerForm, password: e.target.value})} required />
@@ -1421,6 +1569,7 @@ function App() {
               />
               <button type="submit" disabled={isProcessing || !command.trim()} className="command-btn">{isProcessing ? '...' : 'Go'}</button>
             </div>
+            {voiceStatus && <div className="voice-status-msg" style={{padding:'6px 12px',marginBottom:'8px',borderRadius:'6px',fontSize:'13px',background:voiceStatus.includes('❌')?'#fee2e2':'#dbeafe',color:voiceStatus.includes('❌')?'#dc2626':'#1e40af'}}>{voiceStatus}</div>}
             {showSuggestions && suggestions.length > 0 && (
               <div className="suggestions-dropdown">
                 {suggestions.map((s, i) => (
@@ -1920,6 +2069,7 @@ function App() {
               />
               <button type="submit" disabled={isProcessing || !command.trim()} className="command-btn">{isProcessing ? '...' : 'Go'}</button>
             </div>
+            {voiceStatus && <div className="voice-status-msg" style={{padding:'6px 12px',marginBottom:'8px',borderRadius:'6px',fontSize:'13px',background:voiceStatus.includes('❌')?'#fee2e2':'#dbeafe',color:voiceStatus.includes('❌')?'#dc2626':'#1e40af'}}>{voiceStatus}</div>}
             {showSuggestions && suggestions.length > 0 && (
               <div className="suggestions-dropdown">
                 {suggestions.map((s, i) => (
@@ -1976,6 +2126,38 @@ function App() {
                 </div>
               )}
             </div>
+            <div className="panel expiry-panel">
+              <h2>Expiring Soon</h2>
+              {expiringProducts.length === 0 ? <p className="empty">No products expiring soon</p> : (
+                <div className="alert-list">
+                  {expiringProducts.map(p => (
+                    <div key={p.id} className={`alert-item expiry-item ${p.days_until_expiry <= 7 ? 'critical' : ''}`}>
+                      <span className="alert-name">{p.name}</span>
+                      <span className={`expiry-days ${p.days_until_expiry <= 7 ? 'urgent' : ''}`}>
+                        {p.days_until_expiry} days left
+                      </span>
+                      <span className="expiry-price">
+                        {p.is_on_clearance ? (
+                          <>
+                            <span className="original-price">₹{p.price}</span>
+                            <span className="clearance-price">₹{p.clearance_price}</span>
+                          </>
+                        ) : (
+                          <span>₹{p.price}</span>
+                        )}
+                      </span>
+                      {!p.is_on_clearance && (
+                        <button className="clearance-btn" onClick={async () => {
+                          await fetch(`/api/products/${p.id}/apply-clearance`, { method: 'POST' })
+                          fetchAdminDashboard(user.shop_id)
+                        }}>Put on Sale</button>
+                      )}
+                      {p.is_on_clearance && <span className="on-sale-badge">ON SALE</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             <div className="panel logs-panel">
               <h2>Recent Activity</h2>
               <div className="log-list">
@@ -2020,6 +2202,30 @@ function App() {
                     <div className="form-group"><label>Quantity *</label><input type="number" value={productForm.quantity} onChange={e => setProductForm({...productForm, quantity: e.target.value})} required /></div>
                     <div className="form-group"><label>Low Stock Alert</label><input type="number" value={productForm.min_stock_level} onChange={e => setProductForm({...productForm, min_stock_level: e.target.value})} /></div>
                   </div>
+                </div>
+                <div className="form-section expiry-section">
+                  <h3>Expiry & Clearance</h3>
+                  <div className="form-row">
+                    <div className="form-group checkbox-group">
+                      <label>
+                        <input type="checkbox" checked={productForm.is_perishable} onChange={e => setProductForm({...productForm, is_perishable: e.target.checked})} />
+                        Perishable Item (has expiry date)
+                      </label>
+                    </div>
+                  </div>
+                  {productForm.is_perishable && (
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Expiry Date</label>
+                        <input type="date" value={productForm.expiry_date} onChange={e => setProductForm({...productForm, expiry_date: e.target.value})} min={new Date().toISOString().split('T')[0]} />
+                      </div>
+                      <div className="form-group">
+                        <label>Clearance Discount (%)</label>
+                        <input type="number" value={productForm.clearance_discount} onChange={e => setProductForm({...productForm, clearance_discount: e.target.value})} min="0" max="90" placeholder="20" />
+                        <small>Auto-applied when expiring soon</small>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="form-group"><label>Tags (comma-separated)</label><input type="text" value={productForm.tags} onChange={e => setProductForm({...productForm, tags: e.target.value})} placeholder="e.g. lipstick, makeup" /></div>
                 <div className="form-actions">
@@ -2159,6 +2365,7 @@ function App() {
               />
               <button type="submit" disabled={isProcessing || !command.trim()} className="command-btn">{isProcessing ? '...' : 'Go'}</button>
             </div>
+            {voiceStatus && <div className="voice-status-msg" style={{padding:'6px 12px',marginBottom:'8px',borderRadius:'6px',fontSize:'13px',background:voiceStatus.includes('❌')?'#fee2e2':'#dbeafe',color:voiceStatus.includes('❌')?'#dc2626':'#1e40af'}}>{voiceStatus}</div>}
             {showSuggestions && suggestions.length > 0 && (
               <div className="suggestions-dropdown">
                 {suggestions.map((s, i) => (
@@ -2180,6 +2387,65 @@ function App() {
             )}
           </form>
         </div>
+
+        {/* Hot Deals / Clearance Sale Section */}
+        {hotDeals.length > 0 && (
+          <div className="hot-deals-section">
+            <div className="hot-deals-header">
+              <div className="hot-deals-title">
+                <span className="fire-icon">🔥</span>
+                <h2>Hot Deals</h2>
+                <span className="deals-subtitle">Limited Time Offers!</span>
+              </div>
+              <div className="deals-badge-container">
+                <span className="mega-sale-badge">MEGA SALE</span>
+                <span className="limited-badge">⏰ Limited Stock</span>
+              </div>
+            </div>
+            <div className="hot-deals-grid">
+              {hotDeals.map((deal, index) => (
+                <div key={deal.id} className="hot-deal-card" onClick={() => {
+                  // Navigate to the shop
+                  setSelectedShopCategory(null)
+                  setSelectedShop(deal.shop_id)
+                }}>
+                  <div className="deal-badges">
+                    <span className="discount-badge">-{Math.round(deal.discount_percent)}% OFF</span>
+                    {index < 3 && <span className="hot-badge">🔥 HOT</span>}
+                    {deal.quantity <= 10 && <span className="limited-stock-badge">Only {deal.quantity} left!</span>}
+                  </div>
+                  <div className="deal-image">
+                    {deal.image_url ? (
+                      <img src={deal.image_url} alt={deal.name} />
+                    ) : (
+                      <div className="deal-placeholder">{deal.name[0]}</div>
+                    )}
+                  </div>
+                  <div className="deal-info">
+                    <span className="deal-shop">{deal.shop_name}</span>
+                    <h4 className="deal-name">{deal.name}</h4>
+                    <div className="deal-prices">
+                      <span className="deal-original">₹{deal.original_price}</span>
+                      <span className="deal-current">₹{deal.clearance_price}</span>
+                    </div>
+                    <div className="deal-savings">
+                      You Save: ₹{(deal.original_price - deal.clearance_price).toFixed(0)}
+                    </div>
+                    <button className="deal-buy-btn">
+                      <span>Grab Deal</span>
+                      <span className="arrow">→</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="section-divider">
+          <span>Browse by Category</span>
+        </div>
+
         <div className="categories-grid">
           {shopCategories.map(cat => (
             <div key={cat.id} className="category-card" onClick={() => setSelectedShopCategory(cat.id)}>
@@ -2190,7 +2456,7 @@ function App() {
             </div>
           ))}
         </div>
-        {cart.length > 0 && <div className="floating-cart"><span>{cart.reduce((sum, i) => sum + i.qty, 0)} items</span><span>${cartTotal.toFixed(2)}</span></div>}
+        {cart.length > 0 && <div className="floating-cart"><span>{cart.reduce((sum, i) => sum + i.qty, 0)} items</span><span>₹{cartTotal.toFixed(2)}</span></div>}
       </div>
     )
   }
@@ -2247,20 +2513,45 @@ function App() {
         </div>
         <div className="products-grid">
           {shopProducts.map((p, index) => (
-            <div key={p.id} className="product-card" ref={index === shopProducts.length - 1 ? lastItemRef : null}>
+            <div key={p.id} className={`product-card ${p.is_on_clearance ? 'on-clearance' : ''}`} ref={index === shopProducts.length - 1 ? lastItemRef : null}>
               <div className="product-image">
                 {p.image_url ? <img src={p.image_url} alt={p.name} /> : <div className="placeholder">{p.name[0]}</div>}
-                {p.compare_at_price && <span className="sale-badge">Sale</span>}
+                {/* Sale Badges */}
+                <div className="product-badges">
+                  {p.is_on_clearance && (
+                    <>
+                      <span className="clearance-badge">🔥 CLEARANCE</span>
+                      <span className="percent-off-badge">-{Math.round(p.clearance_discount || 20)}%</span>
+                    </>
+                  )}
+                  {p.compare_at_price && !p.is_on_clearance && <span className="sale-badge">Sale</span>}
+                  {p.is_featured && <span className="featured-badge">⭐ Featured</span>}
+                  {p.quantity > 0 && p.quantity <= 5 && <span className="low-stock-badge">Only {p.quantity} left!</span>}
+                </div>
               </div>
               <div className="product-info">
                 {p.brand && <span className="product-brand">{p.brand}</span>}
                 <h3>{p.name}</h3>
                 <div className="product-price">
-                  <span className="current-price">${p.price}</span>
-                  {p.compare_at_price && <span className="original-price">${p.compare_at_price}</span>}
+                  {p.is_on_clearance ? (
+                    <>
+                      <span className="original-price strikethrough">₹{p.price}</span>
+                      <span className="clearance-price">₹{p.clearance_price || (p.price * (1 - (p.clearance_discount || 20) / 100)).toFixed(0)}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="current-price">₹{p.price}</span>
+                      {p.compare_at_price && <span className="original-price">₹{p.compare_at_price}</span>}
+                    </>
+                  )}
                 </div>
+                {p.is_on_clearance && (
+                  <div className="savings-tag">
+                    Save ₹{(p.price - (p.clearance_price || p.price * (1 - (p.clearance_discount || 20) / 100))).toFixed(0)}!
+                  </div>
+                )}
                 <button className="add-to-cart" onClick={() => addToCart(p)} disabled={p.quantity === 0}>
-                  {p.quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
+                  {p.quantity === 0 ? 'Out of Stock' : p.is_on_clearance ? '🛒 Grab Now!' : 'Add to Cart'}
                 </button>
               </div>
             </div>

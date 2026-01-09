@@ -991,6 +991,138 @@ body {
   background: #2563eb;
 }
 
+/* ============== EXPIRY & CLEARANCE STYLES ============== */
+.expiry-panel { grid-column: 1 / -1; }
+
+.expiry-item {
+  border-left: 4px solid var(--warning);
+}
+.expiry-item.critical {
+  border-left-color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.expiry-days {
+  font-weight: 600;
+  color: var(--warning);
+  min-width: 80px;
+}
+.expiry-days.urgent {
+  color: var(--danger);
+  animation: pulse-warning 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-warning {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.expiry-price {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.expiry-price .original-price {
+  text-decoration: line-through;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.expiry-price .clearance-price {
+  font-weight: 700;
+  color: var(--success);
+  font-size: 15px;
+}
+
+.clearance-btn {
+  padding: 8px 14px !important;
+  background: var(--warning) !important;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+.clearance-btn:hover {
+  background: #ea580c !important;
+  transform: scale(1.02);
+}
+
+.on-sale-badge {
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+}
+
+/* Clearance badge for customer view */
+.clearance-sale-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+  animation: sale-pulse 2s ease-in-out infinite;
+}
+
+@keyframes sale-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* Expiry form section */
+.expiry-section {
+  border: 1px dashed var(--border-secondary);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+}
+.expiry-section h3 {
+  color: var(--warning);
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-weight: 500;
+}
+.checkbox-group input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--accent-primary);
+}
+
+.expiry-section small {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* Product table expiry indicators */
+.product-expiring {
+  background: var(--warning-bg) !important;
+}
+.product-expired {
+  background: var(--danger-bg) !important;
+  opacity: 0.7;
+}
+
 .log-list {
   display: flex;
   flex-direction: column;
@@ -2494,5 +2626,489 @@ button:focus-visible {
 
   .modal-overlay {
     padding: 0;
+  }
+}
+
+/* ============== HOT DEALS / CLEARANCE SALE SECTION ============== */
+
+.hot-deals-section {
+  margin: 24px 0;
+  padding: 24px;
+  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 50%, #ff4757 100%);
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hot-deals-section::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(255, 255, 255, 0.05) 10px,
+    rgba(255, 255, 255, 0.05) 20px
+  );
+  animation: shimmer 20s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-50%) translateY(-50%) rotate(0deg); }
+  100% { transform: translateX(-50%) translateY(-50%) rotate(360deg); }
+}
+
+.hot-deals-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 1;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.hot-deals-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hot-deals-title .fire-icon {
+  font-size: 32px;
+  animation: fire-bounce 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes fire-bounce {
+  0% { transform: scale(1) rotate(-5deg); }
+  100% { transform: scale(1.1) rotate(5deg); }
+}
+
+.hot-deals-title h2 {
+  color: white;
+  font-size: 28px;
+  font-weight: 800;
+  margin: 0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.deals-subtitle {
+  color: #fff3cd;
+  font-size: 14px;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.deals-badge-container {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mega-sale-badge {
+  background: linear-gradient(135deg, #ffd700, #ffaa00);
+  color: #8b0000;
+  padding: 8px 20px;
+  border-radius: 30px;
+  font-weight: 800;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  animation: pulse-badge 1.5s ease-in-out infinite;
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.5);
+}
+
+@keyframes pulse-badge {
+  0%, 100% { transform: scale(1); box-shadow: 0 4px 15px rgba(255, 215, 0, 0.5); }
+  50% { transform: scale(1.05); box-shadow: 0 6px 25px rgba(255, 215, 0, 0.7); }
+}
+
+.limited-badge {
+  background: rgba(0, 0, 0, 0.3);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 30px;
+  font-weight: 600;
+  font-size: 13px;
+  animation: blink-badge 2s ease-in-out infinite;
+}
+
+@keyframes blink-badge {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.hot-deals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.hot-deal-card {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+.hot-deal-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+}
+
+.deal-badges {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  z-index: 2;
+}
+
+.discount-badge {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 800;
+  font-size: 14px;
+  animation: shake-badge 2s ease-in-out infinite;
+}
+
+@keyframes shake-badge {
+  0%, 100% { transform: rotate(0deg); }
+  10%, 30%, 50%, 70%, 90% { transform: rotate(-3deg); }
+  20%, 40%, 60%, 80% { transform: rotate(3deg); }
+}
+
+.hot-badge {
+  background: linear-gradient(135deg, #ff6b35, #ff4757);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.limited-stock-badge {
+  background: #2d3436;
+  color: #ffd700;
+  padding: 4px 10px;
+  border-radius: 15px;
+  font-size: 11px;
+  font-weight: 600;
+  animation: pulse 1.5s infinite;
+}
+
+.deal-image {
+  width: 100%;
+  height: 140px;
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.deal-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.deal-placeholder {
+  width: 70px;
+  height: 70px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.deal-info {
+  padding: 14px;
+}
+
+.deal-shop {
+  font-size: 11px;
+  color: #6c757d;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.deal-name {
+  margin: 6px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #2d3436;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.deal-prices {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+}
+
+.deal-original {
+  color: #adb5bd;
+  font-size: 14px;
+  text-decoration: line-through;
+}
+
+.deal-current {
+  color: #e74c3c;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.deal-savings {
+  background: linear-gradient(135deg, #00b894, #00cec9);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-block;
+  margin-bottom: 10px;
+}
+
+.deal-buy-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.deal-buy-btn:hover {
+  background: linear-gradient(135deg, #c0392b, #a93226);
+  transform: scale(1.02);
+}
+
+.deal-buy-btn .arrow {
+  transition: transform 0.3s ease;
+}
+
+.deal-buy-btn:hover .arrow {
+  transform: translateX(4px);
+}
+
+.section-divider {
+  display: flex;
+  align-items: center;
+  margin: 30px 0 20px;
+  gap: 20px;
+}
+
+.section-divider::before,
+.section-divider::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--border-primary), transparent);
+}
+
+.section-divider span {
+  color: var(--text-secondary);
+  font-size: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ============== PRODUCT CARD BADGES ============== */
+
+.product-card.on-clearance {
+  border: 3px solid #e74c3c;
+  animation: clearance-glow 2s ease-in-out infinite;
+}
+
+@keyframes clearance-glow {
+  0%, 100% { box-shadow: 0 0 10px rgba(231, 76, 60, 0.3); }
+  50% { box-shadow: 0 0 25px rgba(231, 76, 60, 0.6); }
+}
+
+.product-badges {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  z-index: 2;
+}
+
+.clearance-badge {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 800;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 2px 10px rgba(231, 76, 60, 0.4); }
+  50% { box-shadow: 0 4px 20px rgba(231, 76, 60, 0.8); }
+}
+
+.percent-off-badge {
+  background: linear-gradient(135deg, #ffd700, #ffaa00);
+  color: #8b0000;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 900;
+  font-size: 13px;
+  animation: bounce-badge 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes bounce-badge {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.08); }
+}
+
+.featured-badge {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 15px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.low-stock-badge {
+  background: #2d3436;
+  color: #ffd700;
+  padding: 4px 10px;
+  border-radius: 15px;
+  font-size: 10px;
+  font-weight: 700;
+  animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.product-price .strikethrough {
+  text-decoration: line-through;
+  color: #adb5bd;
+  font-size: 14px;
+}
+
+.product-price .clearance-price {
+  color: #e74c3c;
+  font-size: 22px;
+  font-weight: 800;
+  margin-left: 8px;
+}
+
+.savings-tag {
+  background: linear-gradient(135deg, #00b894, #00cec9);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  margin: 6px 0;
+  display: inline-block;
+  animation: savings-pop 2s ease-in-out infinite;
+}
+
+@keyframes savings-pop {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.product-card.on-clearance .add-to-cart {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  animation: cta-pulse 2s infinite;
+}
+
+@keyframes cta-pulse {
+  0%, 100% { box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4); }
+  50% { box-shadow: 0 6px 25px rgba(231, 76, 60, 0.7); }
+}
+
+/* Mobile responsiveness for hot deals */
+@media (max-width: 768px) {
+  .hot-deals-section {
+    margin: 16px 0;
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .hot-deals-title h2 {
+    font-size: 22px;
+  }
+
+  .hot-deals-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .deal-image {
+    height: 110px;
+  }
+
+  .deal-info {
+    padding: 10px;
+  }
+
+  .deal-current {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hot-deals-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hot-deals-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .deals-badge-container {
+    margin-top: 10px;
   }
 }
