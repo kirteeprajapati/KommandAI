@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts'
+import { getApiUrl, getWebSocketUrl } from './config'
 
 const COLORS = ['#3b82f6', '#22c55e', '#f97316', '#8b5cf6', '#ef4444', '#06b6d4']
 const PAGE_SIZE = 20
@@ -565,7 +566,7 @@ function App() {
   }, [userSearch, userRoleFilter])
 
   const connectWebSocket = () => {
-    const ws = new WebSocket(`ws://${window.location.hostname}:8000/api/ws`)
+    const ws = new WebSocket(getWebSocketUrl('api/ws'))
     ws.onopen = () => { setIsConnected(true); addLog('Connected to server', 'info') }
     ws.onmessage = (e) => {
       const data = JSON.parse(e.data)
