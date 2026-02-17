@@ -36,6 +36,19 @@ A full-stack web application enabling natural language commands to manage shops,
 
 ---
 
+## 📸 Screenshots
+
+| Dashboard | Light Mode |
+|-----------|------------|
+| ![](assets/Dashboard.png) | ![](assets/LightMode.png) |
+
+| AI Search | Shops |
+|-----------|-------|
+| ![](assets/SearchNLP.png) | ![](assets/Shops.png) |
+
+
+---
+
 ## Core Features & Impact
 
 ### 1. AI-Powered Natural Language Command System (25%)
