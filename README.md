@@ -8,6 +8,17 @@ Agentic AI Command & Control System - A backend that takes natural language comm
 User Command → Gemini (Intent Parser) → Action Executor → Database → WebSocket Broadcast
 ```
 
+## 📸 Screenshots
+
+| Dashboard | Light Mode |
+|-----------|------------|
+| ![](assets/Dashboard.png) | ![](assets/LightMode.png) |
+
+| AI Search | Shops |
+|-----------|-------|
+| ![](assets/SearchNLP.png) | ![](assets/Shops.png) |
+
+
 ## Features
 
 - **Intent Recognition**: Natural language to structured actions via Gemini
