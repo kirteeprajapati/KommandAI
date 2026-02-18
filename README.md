@@ -44,6 +44,36 @@ User Command → Gemini (Intent Parser) → Action Executor → Database → Web
 - **LLM**: Google Gemini 1.5 Flash
 - **Real-time**: WebSockets
 
+Run Backend (Terminal 1)                                                                                                            
+                                                                                                                                      
+  cd "/Users/admin/Desktop/Agentic AI/KommandAI"                                                                                      
+                                                                                                                                      
+  # Activate virtual environment                                                                                                      
+  source venv/bin/activate                                                                                                            
+                                                                                                                                      
+  # Run the backend                                                                                                                   
+  uvicorn app.main:app --reload --host 0.0.0.0 --port 8000                                                                            
+                                                                                                                                      
+  ---                                                                                                                                 
+  Run Frontend (Terminal 2)                                                                                                           
+                                                                                                                                      
+  cd "/Users/admin/Desktop/Agentic AI/KommandAI/frontend"                                                                             
+                                                                                                                                      
+  # Install dependencies (if not done)                                                                                                
+  npm install                                                                                                                         
+                                                                                                                                      
+  # Run frontend                                                                                                                      
+  npm run dev                                                                                                                         
+                                                                                                                                      
+  ---                                                                                                                                 
+  Access the app                                                                                                                      
+                                                                                                                                      
+  - Frontend: http://localhost:3000                                                                                                   
+  - Backend API: http://localhost:8000                                                                                                
+  - API Docs: http://localhost:8000/docs                                                                                              
+                                                                                                                                      
+  ---                                      
+
 ## Setup
 
 ### 1. Install Dependencies

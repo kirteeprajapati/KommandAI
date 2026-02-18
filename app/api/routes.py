@@ -54,6 +54,33 @@ async def execute_command(
     context = {**session_context, **(command.context or {})}
     intent = await parser.parse(command.text, context)
 
+    # Merge user context into intent parameters for customer/shop-specific actions
+    if isinstance(intent, ParsedIntent):
+        # Ensure user context is available in parameters
+        if context.get("user_email"):
+            intent.parameters.setdefault("customer_email", context["user_email"])
+        if context.get("customer_email"):
+            intent.parameters["customer_email"] = context["customer_email"]
+        if context.get("shop_id"):
+            intent.parameters.setdefault("shop_id", context["shop_id"])
+        if context.get("user_id"):
+            intent.parameters.setdefault("user_id", context["user_id"])
+        if context.get("user_role"):
+            intent.parameters.setdefault("user_role", context["user_role"])
+    elif isinstance(intent, MultiStepPlan):
+        # Apply to all steps in a multi-step plan
+        for step in intent.steps:
+            if context.get("user_email"):
+                step.parameters.setdefault("customer_email", context["user_email"])
+            if context.get("customer_email"):
+                step.parameters["customer_email"] = context["customer_email"]
+            if context.get("shop_id"):
+                step.parameters.setdefault("shop_id", context["shop_id"])
+            if context.get("user_id"):
+                step.parameters.setdefault("user_id", context["user_id"])
+            if context.get("user_role"):
+                step.parameters.setdefault("user_role", context["user_role"])
+
     log = ActionLog(
         user_input=command.text,
         parsed_intent=intent.model_dump() if isinstance(intent, ParsedIntent) else {"steps": [s.model_dump() for s in intent.steps]},

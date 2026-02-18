@@ -1011,7 +1011,16 @@ function App() {
       const res = await fetch(getApiUrl('api/command'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: command.trim() })
+        body: JSON.stringify({
+          text: command.trim(),
+          context: {
+            user_id: user?.id,
+            user_email: user?.email,
+            user_role: user?.role,
+            shop_id: user?.shop_id,
+            customer_email: user?.email
+          }
+        })
       })
       const data = await res.json()
       if (res.ok) {
@@ -1598,7 +1607,7 @@ function App() {
           <div className="stat-card success"><div className="stat-value">{platformStats.verified_shops || 0}</div><div className="stat-label">Verified Shops</div></div>
           <div className="stat-card"><div className="stat-value">{platformStats.total_shop_owners || 0}</div><div className="stat-label">Shop Owners</div></div>
           <div className="stat-card"><div className="stat-value">{platformStats.total_customers || 0}</div><div className="stat-label">Customers</div></div>
-          <div className="stat-card success"><div className="stat-value">${platformStats.platform_revenue?.toLocaleString() || 0}</div><div className="stat-label">Total Revenue</div></div>
+          <div className="stat-card success"><div className="stat-value">₹{platformStats.platform_revenue?.toLocaleString() || 0}</div><div className="stat-label">Total Revenue</div></div>
           <div className="stat-card"><div className="stat-value">{platformStats.total_users || 0}</div><div className="stat-label">Total Users</div></div>
         </div>
 
@@ -1723,7 +1732,7 @@ function App() {
                         <td>{shop.owner_email || '-'}</td>
                         <td>{shop.city || '-'}</td>
                         <td>{shop.total_orders}</td>
-                        <td>${shop.total_revenue?.toLocaleString()}</td>
+                        <td>₹{shop.total_revenue?.toLocaleString()}</td>
                         <td><span className={`status ${shop.is_active ? 'active' : 'suspended'}`}>{shop.is_active ? 'Active' : 'Suspended'}</span></td>
                         <td>
                           <button className="edit-btn" onClick={() => startEditShop(shop)}>Edit</button>
@@ -2095,7 +2104,7 @@ function App() {
 
         <div className="stats-grid">
           <div className="stat-card"><div className="stat-value">{dashboardStats.total_products || 0}</div><div className="stat-label">Products</div></div>
-          <div className="stat-card success"><div className="stat-value">${dashboardStats.total_revenue?.toLocaleString() || 0}</div><div className="stat-label">Total Revenue</div></div>
+          <div className="stat-card success"><div className="stat-value">₹{dashboardStats.total_revenue?.toLocaleString() || 0}</div><div className="stat-label">Total Revenue</div></div>
           <div className="stat-card"><div className="stat-value">{dashboardStats.total_orders || 0}</div><div className="stat-label">Orders</div></div>
           <div className="stat-card warning"><div className="stat-value">{dashboardStats.pending_orders || 0}</div><div className="stat-label">Pending</div></div>
           <div className="stat-card danger"><div className="stat-value">{dashboardStats.low_stock_count || 0}</div><div className="stat-label">Low Stock</div></div>
@@ -2567,12 +2576,12 @@ function App() {
               {cart.map(item => (
                 <div key={item.id} className="cart-item">
                   <span>{item.name} x{item.qty}</span>
-                  <span>${(item.price * item.qty).toFixed(2)}</span>
+                  <span>₹{(item.price * item.qty).toFixed(2)}</span>
                   <button onClick={() => removeFromCart(item.id)}>×</button>
                 </div>
               ))}
             </div>
-            <div className="cart-total"><span>Total:</span><span>${cartTotal.toFixed(2)}</span></div>
+            <div className="cart-total"><span>Total:</span><span>₹{cartTotal.toFixed(2)}</span></div>
             <button className="checkout-btn">Checkout</button>
           </div>
         )}
