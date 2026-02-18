@@ -20,13 +20,15 @@ export const getApiUrl = (endpoint) => {
 // Helper function to get WebSocket URL
 export const getWebSocketUrl = (endpoint) => {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-  
+
   if (WS_URL) {
     const baseUrl = WS_URL.endsWith('/') ? WS_URL.slice(0, -1) : WS_URL;
     return `${baseUrl}/${cleanEndpoint}`;
   }
-  
-  // Fallback to localhost for development
-  return `ws://${window.location.hostname}:8000/${cleanEndpoint}`;
+
+  // Fallback for development - use correct protocol based on current page
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const port = window.location.port || (window.location.protocol === 'https:' ? '443' : '8000');
+  return `${wsProtocol}//${window.location.hostname}:${port}/${cleanEndpoint}`;
 };
 
