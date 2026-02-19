@@ -5,6 +5,24 @@ import { getApiUrl, getWebSocketUrl } from './config'
 const COLORS = ['#3b82f6', '#22c55e', '#f97316', '#8b5cf6', '#ef4444', '#06b6d4']
 const PAGE_SIZE = 20
 
+// Search/Filter bar component - defined outside App to prevent re-creation on render
+const SearchFilterBar = ({ search, setSearch, placeholder, filters }) => (
+  <div className="search-filter-bar">
+    <div className="search-input-wrapper">
+      <span className="search-icon">🔍</span>
+      <input
+        type="text"
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        placeholder={placeholder}
+        className="search-input"
+      />
+      {search && <button className="clear-btn" onClick={() => setSearch('')}>×</button>}
+    </div>
+    {filters}
+  </div>
+)
+
 // Theme toggle component
 const ThemeToggle = ({ theme, toggleTheme }) => (
   <button className="theme-toggle" onClick={toggleTheme} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
@@ -1340,24 +1358,6 @@ function App() {
   const removeFromCart = (id) => setCart(prev => prev.filter(i => i.id !== id))
   const cartTotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0)
 
-  // Search/Filter bar component
-  const SearchFilterBar = ({ search, setSearch, placeholder, filters }) => (
-    <div className="search-filter-bar">
-      <div className="search-input-wrapper">
-        <span className="search-icon">🔍</span>
-        <input
-          type="text"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder={placeholder}
-          className="search-input"
-        />
-        {search && <button className="clear-btn" onClick={() => setSearch('')}>×</button>}
-      </div>
-      {filters}
-    </div>
-  )
-
   // Load More button component
   const LoadMoreButton = ({ hasMore, isLoading, onClick }) => (
     hasMore && (
@@ -2349,7 +2349,7 @@ function App() {
             {orders.length === 0 ? <p className="empty">No orders found</p> : (
               <div className="data-table">
                 <table>
-                  <thead><tr><th>Order #</th><th>Customer</th><th>Product</th><th>Qty</th><th>MRP</th><th>Sold At</th><th>Profit</th><th>Status</th><th>Date</th></tr></thead>
+                  <thead><tr><th>Order #</th><th>Customer</th><th>Product</th><th>Qty</th><th>Cost</th><th>MRP</th><th>Sold At</th><th>Profit</th><th>Status</th><th>Date</th></tr></thead>
                   <tbody>
                     {orders.map(o => (
                       <tr key={o.id}>
@@ -2357,6 +2357,7 @@ function App() {
                         <td>{o.customer_name}</td>
                         <td>{o.product_name}</td>
                         <td>{o.quantity}</td>
+                        <td className="cost">₹{o.cost_price || '-'}</td>
                         <td className="price">₹{o.listed_price || o.unit_price}</td>
                         <td className="price">₹{o.final_price || o.unit_price}</td>
                         <td className={`profit ${(o.profit || 0) >= 0 ? 'positive' : 'negative'}`}>
