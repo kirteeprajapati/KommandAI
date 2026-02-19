@@ -312,3 +312,172 @@ async def create_default_categories(db: AsyncSession):
 
     await db.commit()
     print("✓ Default shop categories initialized")
+
+
+# Default shops with products for each category
+DEFAULT_SHOPS_DATA = {
+    "Grocery": {
+        "shop": {"name": "Fresh Mart", "description": "Your daily grocery needs", "city": "Mumbai", "owner_name": "Ramesh Kumar", "owner_email": "freshmart@demo.com"},
+        "products": [
+            {"name": "Basmati Rice (5kg)", "price": 450, "cost_price": 380, "quantity": 100},
+            {"name": "Toor Dal (1kg)", "price": 180, "cost_price": 150, "quantity": 80},
+            {"name": "Sunflower Oil (1L)", "price": 160, "cost_price": 130, "quantity": 60},
+            {"name": "Whole Wheat Atta (5kg)", "price": 280, "cost_price": 230, "quantity": 90},
+            {"name": "Sugar (1kg)", "price": 50, "cost_price": 42, "quantity": 150},
+        ]
+    },
+    "Beauty & Cosmetics": {
+        "shop": {"name": "Glow Studio", "description": "Premium beauty products", "city": "Delhi", "owner_name": "Priya Sharma", "owner_email": "glowstudio@demo.com"},
+        "products": [
+            {"name": "Lakme Lipstick Red", "price": 350, "cost_price": 220, "quantity": 40},
+            {"name": "Face Wash Neem", "price": 180, "cost_price": 120, "quantity": 60},
+            {"name": "Hair Serum 100ml", "price": 450, "cost_price": 300, "quantity": 35},
+            {"name": "Moisturizer SPF 30", "price": 399, "cost_price": 260, "quantity": 50},
+            {"name": "Kajal Pencil", "price": 150, "cost_price": 90, "quantity": 80},
+        ]
+    },
+    "Fashion & Clothing": {
+        "shop": {"name": "Style Hub", "description": "Trendy fashion for everyone", "city": "Bangalore", "owner_name": "Amit Patel", "owner_email": "stylehub@demo.com"},
+        "products": [
+            {"name": "Cotton Kurta Men", "price": 799, "cost_price": 450, "quantity": 30},
+            {"name": "Denim Jeans Women", "price": 1299, "cost_price": 750, "quantity": 25},
+            {"name": "Printed T-Shirt", "price": 499, "cost_price": 280, "quantity": 50},
+            {"name": "Formal Shirt Men", "price": 999, "cost_price": 600, "quantity": 35},
+            {"name": "Palazzo Pants", "price": 699, "cost_price": 400, "quantity": 40},
+        ]
+    },
+    "Footwear": {
+        "shop": {"name": "Foot Palace", "description": "Comfort for your feet", "city": "Chennai", "owner_name": "Suresh Iyer", "owner_email": "footpalace@demo.com"},
+        "products": [
+            {"name": "Running Shoes", "price": 2499, "cost_price": 1600, "quantity": 20},
+            {"name": "Leather Sandals", "price": 899, "cost_price": 550, "quantity": 35},
+            {"name": "Canvas Sneakers", "price": 1299, "cost_price": 800, "quantity": 30},
+            {"name": "Formal Shoes Men", "price": 1999, "cost_price": 1200, "quantity": 25},
+            {"name": "Flip Flops", "price": 299, "cost_price": 150, "quantity": 60},
+        ]
+    },
+    "Electronics": {
+        "shop": {"name": "Tech Zone", "description": "Latest gadgets and electronics", "city": "Hyderabad", "owner_name": "Vikram Reddy", "owner_email": "techzone@demo.com"},
+        "products": [
+            {"name": "Wireless Earbuds", "price": 1999, "cost_price": 1200, "quantity": 40},
+            {"name": "Power Bank 10000mAh", "price": 999, "cost_price": 600, "quantity": 50},
+            {"name": "USB-C Cable 1m", "price": 299, "cost_price": 150, "quantity": 100},
+            {"name": "Phone Case Universal", "price": 399, "cost_price": 180, "quantity": 80},
+            {"name": "Bluetooth Speaker", "price": 1499, "cost_price": 900, "quantity": 30},
+        ]
+    },
+    "Sports & Fitness": {
+        "shop": {"name": "FitGear Pro", "description": "Sports equipment & fitness gear", "city": "Pune", "owner_name": "Rahul Deshmukh", "owner_email": "fitgearpro@demo.com"},
+        "products": [
+            {"name": "Yoga Mat Premium", "price": 799, "cost_price": 450, "quantity": 40},
+            {"name": "Dumbbell Set 5kg", "price": 1299, "cost_price": 800, "quantity": 25},
+            {"name": "Skipping Rope", "price": 249, "cost_price": 120, "quantity": 60},
+            {"name": "Resistance Bands Set", "price": 599, "cost_price": 350, "quantity": 45},
+            {"name": "Cricket Ball Leather", "price": 450, "cost_price": 280, "quantity": 50},
+        ]
+    },
+    "Home & Kitchen": {
+        "shop": {"name": "Home Essentials", "description": "Everything for your home", "city": "Kolkata", "owner_name": "Anita Sen", "owner_email": "homeessentials@demo.com"},
+        "products": [
+            {"name": "Non-Stick Pan Set", "price": 1499, "cost_price": 900, "quantity": 20},
+            {"name": "Cotton Bedsheet Double", "price": 899, "cost_price": 550, "quantity": 30},
+            {"name": "Glass Water Bottle 1L", "price": 349, "cost_price": 180, "quantity": 50},
+            {"name": "Kitchen Knife Set", "price": 799, "cost_price": 450, "quantity": 35},
+            {"name": "Table Lamp LED", "price": 599, "cost_price": 350, "quantity": 40},
+        ]
+    },
+    "Books & Stationery": {
+        "shop": {"name": "Book World", "description": "Books and stationery supplies", "city": "Ahmedabad", "owner_name": "Meera Joshi", "owner_email": "bookworld@demo.com"},
+        "products": [
+            {"name": "Notebook A4 200 pages", "price": 120, "cost_price": 70, "quantity": 100},
+            {"name": "Pen Set (10 pcs)", "price": 150, "cost_price": 80, "quantity": 80},
+            {"name": "Hindi Novel Bestseller", "price": 299, "cost_price": 180, "quantity": 40},
+            {"name": "Sketch Book A3", "price": 180, "cost_price": 100, "quantity": 60},
+            {"name": "Highlighter Set (5 colors)", "price": 99, "cost_price": 50, "quantity": 90},
+        ]
+    },
+    "Health & Wellness": {
+        "shop": {"name": "Wellness Plus", "description": "Health supplements & wellness products", "city": "Jaipur", "owner_name": "Dr. Arun Gupta", "owner_email": "wellnessplus@demo.com"},
+        "products": [
+            {"name": "Multivitamin Tablets (60)", "price": 450, "cost_price": 280, "quantity": 50},
+            {"name": "Protein Powder 500g", "price": 999, "cost_price": 650, "quantity": 30},
+            {"name": "Hand Sanitizer 500ml", "price": 149, "cost_price": 80, "quantity": 100},
+            {"name": "Digital Thermometer", "price": 299, "cost_price": 150, "quantity": 40},
+            {"name": "First Aid Kit Basic", "price": 399, "cost_price": 220, "quantity": 35},
+        ]
+    },
+    "Jewelry & Accessories": {
+        "shop": {"name": "Jewel Box", "description": "Elegant jewelry & accessories", "city": "Lucknow", "owner_name": "Kavita Agarwal", "owner_email": "jewelbox@demo.com"},
+        "products": [
+            {"name": "Silver Earrings Pair", "price": 799, "cost_price": 480, "quantity": 30},
+            {"name": "Gold Plated Bracelet", "price": 599, "cost_price": 350, "quantity": 40},
+            {"name": "Leather Wallet Men", "price": 699, "cost_price": 400, "quantity": 35},
+            {"name": "Pearl Necklace Set", "price": 1299, "cost_price": 750, "quantity": 20},
+            {"name": "Sunglasses Unisex", "price": 499, "cost_price": 280, "quantity": 50},
+        ]
+    },
+}
+
+
+async def create_default_shops_and_products(db: AsyncSession):
+    """Create default shops with products for each category"""
+    from app.models.product import Product
+
+    # First, get all categories
+    result = await db.execute(select(ShopCategory))
+    categories = {cat.name: cat.id for cat in result.scalars().all()}
+
+    # Check if we already have shops (don't seed if data exists)
+    shop_count = await db.execute(select(func.count(Shop.id)))
+    if shop_count.scalar() > 0:
+        print("✓ Shops already exist, skipping default shop seeding")
+        return
+
+    shops_created = 0
+    products_created = 0
+
+    for cat_name, data in DEFAULT_SHOPS_DATA.items():
+        # Find matching category
+        category_id = None
+        for db_cat_name, cat_id in categories.items():
+            if cat_name.lower() in db_cat_name.lower() or db_cat_name.lower() in cat_name.lower():
+                category_id = cat_id
+                break
+
+        if not category_id:
+            continue
+
+        shop_data = data["shop"]
+
+        # Create shop
+        shop = Shop(
+            name=shop_data["name"],
+            description=shop_data["description"],
+            city=shop_data["city"],
+            owner_name=shop_data["owner_name"],
+            owner_email=shop_data["owner_email"],
+            category_id=category_id,
+            is_verified=True,
+            is_active=True,
+        )
+        db.add(shop)
+        await db.flush()  # Get shop.id
+        shops_created += 1
+
+        # Create products for this shop
+        for prod_data in data["products"]:
+            product = Product(
+                name=prod_data["name"],
+                price=prod_data["price"],
+                cost_price=prod_data["cost_price"],
+                min_price=prod_data["price"] * 0.85,  # 15% min discount
+                quantity=prod_data["quantity"],
+                min_stock_level=10,
+                shop_id=shop.id,
+                is_active=True,
+            )
+            db.add(product)
+            products_created += 1
+
+    await db.commit()
+    print(f"✓ Created {shops_created} default shops with {products_created} products")

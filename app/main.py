@@ -6,7 +6,7 @@ from app.core.config import settings
 from app.core.database import init_db, async_session
 from app.api.routes import router
 from app.services.user_service import create_default_users
-from app.services.shop_service import create_default_categories
+from app.services.shop_service import create_default_categories, create_default_shops_and_products
 
 
 @asynccontextmanager
@@ -17,6 +17,7 @@ async def lifespan(app: FastAPI):
     async with async_session() as session:
         await create_default_users(session)
         await create_default_categories(session)
+        await create_default_shops_and_products(session)
     yield
     # Shutdown
     pass
