@@ -1050,11 +1050,58 @@ function App() {
           }
         }
 
-        // Refresh data based on role
+        // Switch tabs based on action type and update data from command response
+        const action = data.action
+        let skipOrderRefresh = false
+        let skipProductRefresh = false
+
+        if (user?.role === 'admin') {
+          // Shop admin tab switching
+          if (['list_orders', 'list_my_orders', 'get_shop_orders', 'create_order', 'update_order', 'cancel_order', 'deliver_order', 'ship_order', 'confirm_order'].includes(action)) {
+            setActiveTab('orders')
+            // If command returned order data, update the orders list directly
+            if (data.data && Array.isArray(data.data)) {
+              setOrders(data.data.map(o => ({
+                id: o.id,
+                customer_name: o.customer,
+                product_name: o.product_name,
+                quantity: o.quantity,
+                unit_price: o.unit_price,
+                total_amount: o.total,
+                status: o.status
+              })))
+              skipOrderRefresh = true  // Don't overwrite with full list
+            }
+          } else if (['list_products', 'search_products', 'get_low_stock', 'create_product', 'update_product', 'restock_product', 'get_product'].includes(action)) {
+            setActiveTab('products')
+            // If command returned product data, update products list
+            if (data.data && Array.isArray(data.data)) {
+              setProducts(data.data)
+              skipProductRefresh = true  // Don't overwrite with full list
+            }
+          } else if (['get_shop_dashboard', 'get_daily_profit', 'get_profit_summary'].includes(action)) {
+            setActiveTab('dashboard')
+          }
+        } else if (user?.role === 'super_admin') {
+          // Super admin tab switching
+          if (['list_shops', 'get_pending_shops', 'verify_shop', 'suspend_shop', 'activate_shop', 'create_shop', 'update_shop', 'get_shop', 'list_orders', 'get_shop_orders'].includes(action)) {
+            setSuperAdminTab('shops')
+          } else if (['list_users', 'create_user', 'update_user', 'get_user'].includes(action)) {
+            setSuperAdminTab('users')
+          } else if (['list_shop_categories', 'create_shop_category'].includes(action)) {
+            setSuperAdminTab('categories')
+          } else if (['get_platform_stats'].includes(action)) {
+            setSuperAdminTab('overview')
+          } else if (['list_products', 'search_products', 'get_low_stock'].includes(action)) {
+            setSuperAdminTab('shops')
+          }
+        }
+
+        // Refresh data based on role (but skip if command already provided filtered data)
         if (user?.role === 'admin' && user.shop_id) {
           fetchAdminDashboard(user.shop_id)
-          fetchAdminProducts(user.shop_id, 0, true)
-          fetchAdminOrders(user.shop_id, 0, true)
+          if (!skipProductRefresh) fetchAdminProducts(user.shop_id, 0, true)
+          if (!skipOrderRefresh) fetchAdminOrders(user.shop_id, 0, true)
         }
         if (user?.role === 'super_admin') {
           fetchPlatformStats()
