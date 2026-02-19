@@ -21,16 +21,34 @@ class OrderService:
         if not product:
             return None
 
-        unit_price = product.price
-        total_amount = unit_price * data.quantity
+        # Pricing calculations
+        cost_price = product.cost_price or 0  # What the shop paid per unit
+        listed_price = product.price  # MRP per unit
+        final_price = listed_price  # Selling price (could be bargained)
+        unit_price = final_price
+
+        quantity = data.quantity
+        total_amount = final_price * quantity
+        total_cost = cost_price * quantity
+        profit = total_amount - total_cost if cost_price > 0 else 0
+        discount_given = (listed_price - final_price) * quantity
 
         order = Order(
             shop_id=product.shop_id,  # Set shop from product
             product_id=data.product_id,
             product_name=product.name,  # Snapshot product name
-            unit_price=unit_price,  # Snapshot price at order time
-            quantity=data.quantity,
+            quantity=quantity,
+            # Pricing
+            cost_price=cost_price,
+            listed_price=listed_price,
+            final_price=final_price,
+            unit_price=unit_price,
             total_amount=total_amount,
+            # Profit tracking
+            total_cost=total_cost,
+            profit=profit,
+            discount_given=discount_given,
+            # Customer info
             customer_name=data.customer_name,
             customer_email=data.customer_email,
         )
