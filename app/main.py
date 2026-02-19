@@ -6,15 +6,17 @@ from app.core.config import settings
 from app.core.database import init_db, async_session
 from app.api.routes import router
 from app.services.user_service import create_default_users
+from app.services.shop_service import create_default_categories
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     await init_db()
-    # Create default users
+    # Create default data
     async with async_session() as session:
         await create_default_users(session)
+        await create_default_categories(session)
     yield
     # Shutdown
     pass
