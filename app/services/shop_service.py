@@ -280,3 +280,35 @@ class ShopService:
             shop.total_orders += 1
             shop.total_revenue += order_amount
             await self.db.commit()
+
+
+# Default categories to seed on startup
+DEFAULT_SHOP_CATEGORIES = [
+    {"name": "Grocery", "description": "Fresh fruits, vegetables, dairy, and daily essentials", "icon": "🛒", "is_perishable": True, "sort_order": 1},
+    {"name": "Beauty & Cosmetics", "description": "Makeup, skincare, haircare, and beauty products", "icon": "💄", "is_perishable": True, "sort_order": 2},
+    {"name": "Fashion & Clothing", "description": "Men's, women's, and kids' apparel", "icon": "👗", "is_perishable": False, "sort_order": 3},
+    {"name": "Footwear", "description": "Shoes, sandals, sneakers, and sports footwear", "icon": "👟", "is_perishable": False, "sort_order": 4},
+    {"name": "Electronics", "description": "Mobiles, laptops, TVs, and gadgets", "icon": "📱", "is_perishable": False, "sort_order": 5},
+    {"name": "Sports & Fitness", "description": "Sports equipment, gym gear, and fitness accessories", "icon": "⚽", "is_perishable": False, "sort_order": 6},
+    {"name": "Home & Kitchen", "description": "Home decor, kitchenware, and appliances", "icon": "🏠", "is_perishable": False, "sort_order": 7},
+    {"name": "Books & Stationery", "description": "Books, notebooks, pens, and office supplies", "icon": "📚", "is_perishable": False, "sort_order": 8},
+    {"name": "Health & Wellness", "description": "Medicines, supplements, and healthcare products", "icon": "💊", "is_perishable": True, "sort_order": 9},
+    {"name": "Jewelry & Accessories", "description": "Jewelry, watches, bags, and accessories", "icon": "💎", "is_perishable": False, "sort_order": 10},
+]
+
+
+async def create_default_categories(db: AsyncSession):
+    """Create default shop categories if they don't exist"""
+    for cat_data in DEFAULT_SHOP_CATEGORIES:
+        # Check if category already exists
+        result = await db.execute(
+            select(ShopCategory).where(ShopCategory.name == cat_data["name"])
+        )
+        existing = result.scalar_one_or_none()
+
+        if not existing:
+            category = ShopCategory(**cat_data)
+            db.add(category)
+
+    await db.commit()
+    print("✓ Default shop categories initialized")
