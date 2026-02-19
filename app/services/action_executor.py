@@ -335,7 +335,20 @@ class ActionExecutor:
 
     async def _list_orders(self, params: Dict[str, Any]) -> CommandResponse:
         status = params.get("status")
+        customer_email = params.get("customer_email")
+        user_role = params.get("user_role")
+        shop_id = params.get("shop_id")
+
         orders = await self.order_service.get_all(status=status)
+
+        # Filter by customer email if user is a customer
+        if user_role == "customer" and customer_email:
+            orders = [o for o in orders if o.customer_email and o.customer_email.lower() == customer_email.lower()]
+
+        # Filter by shop if shop_id is provided (for admin)
+        if shop_id:
+            orders = [o for o in orders if o.shop_id == shop_id]
+
         return CommandResponse(
             success=True,
             action="list_orders",
@@ -345,9 +358,11 @@ class ActionExecutor:
                 "status": o.status,
                 "total": o.total_amount,
                 "customer": o.customer_name,
+                "customer_email": o.customer_email,
                 "product_name": o.product_name,
                 "unit_price": o.unit_price,
-                "quantity": o.quantity
+                "quantity": o.quantity,
+                "created_at": o.created_at.isoformat() if o.created_at else None
             } for o in orders],
         )
 
@@ -527,12 +542,20 @@ class ActionExecutor:
                 message="Search query is required",
             )
         limit = params.get("limit", 20)
-        products = await self.product_service.search(query, limit)
+        shop_id = params.get("shop_id")  # Optional: filter by shop
+        products = await self.product_service.search(query, shop_id=shop_id, limit=limit)
         return CommandResponse(
             success=True,
             action="search_products",
             message=f"Found {len(products)} products matching '{query}'",
-            data=[{"id": p.id, "name": p.name, "price": p.price, "quantity": p.quantity} for p in products],
+            data=[{
+                "id": p.id,
+                "name": p.name,
+                "price": p.price,
+                "quantity": p.quantity,
+                "brand": p.brand,
+                "shop_id": p.shop_id
+            } for p in products],
         )
 
     async def _get_low_stock(self, params: Dict[str, Any]) -> CommandResponse:

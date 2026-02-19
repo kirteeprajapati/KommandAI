@@ -332,6 +332,10 @@ function App() {
   const [productsPage, setProductsPage] = useState(0)
   const [cart, setCart] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [myOrders, setMyOrders] = useState([])
+  const [showMyOrders, setShowMyOrders] = useState(false)
+  const [customerSearchResults, setCustomerSearchResults] = useState([])
+  const [showSearchResults, setShowSearchResults] = useState(false)
 
   // Admin view states
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -1112,6 +1116,38 @@ function App() {
             setSuperAdminTab('overview')
           } else if (['list_products', 'search_products', 'get_low_stock'].includes(action)) {
             setSuperAdminTab('shops')
+          }
+        } else if (user?.role === 'customer') {
+          // Customer action handling
+          if (action === 'list_my_orders' || action === 'list_orders') {
+            // Show customer's orders
+            if (data.data && Array.isArray(data.data)) {
+              // Filter to only show orders for this customer
+              const customerEmail = user?.email?.toLowerCase()
+              const customerOrders = customerEmail
+                ? data.data.filter(o => o.customer_email?.toLowerCase() === customerEmail || o.customer?.toLowerCase().includes(user?.name?.toLowerCase().split(' ')[0] || ''))
+                : data.data
+              setMyOrders(customerOrders)
+              setShowMyOrders(true)
+              setShowSearchResults(false)
+            }
+          } else if (action === 'search_products' || action === 'list_products') {
+            // Show search results
+            if (data.data && Array.isArray(data.data)) {
+              setCustomerSearchResults(data.data)
+              setShowSearchResults(true)
+              setShowMyOrders(false)
+            }
+          } else if (action === 'place_order') {
+            // Order placed successfully - show confirmation and refresh orders
+            if (data.success) {
+              addLog(`🎉 Order placed! Order #${data.data?.id}`, 'success')
+              // Optionally refresh categories/shops
+              fetchShopCategories()
+            }
+          } else if (action === 'list_shop_categories') {
+            // Refresh categories display
+            fetchShopCategories()
           }
         }
 
@@ -2445,6 +2481,54 @@ function App() {
             )}
           </form>
         </div>
+
+        {/* Customer Orders Panel */}
+        {showMyOrders && myOrders.length > 0 && (
+          <div className="customer-orders-panel">
+            <div className="panel-header">
+              <h2>📦 My Orders ({myOrders.length})</h2>
+              <button className="close-btn" onClick={() => setShowMyOrders(false)}>×</button>
+            </div>
+            <div className="orders-list">
+              {myOrders.map(order => (
+                <div key={order.id} className="order-card">
+                  <div className="order-header">
+                    <span className="order-id">Order #{order.id}</span>
+                    <span className={`order-status ${order.status}`}>{order.status}</span>
+                  </div>
+                  <div className="order-details">
+                    <span className="product-name">{order.product || order.product_name}</span>
+                    <span className="order-qty">Qty: {order.quantity}</span>
+                    <span className="order-total">₹{order.total || order.total_amount}</span>
+                  </div>
+                  {order.created_at && (
+                    <div className="order-date">{new Date(order.created_at).toLocaleDateString()}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Customer Search Results */}
+        {showSearchResults && customerSearchResults.length > 0 && (
+          <div className="search-results-panel">
+            <div className="panel-header">
+              <h2>🔍 Search Results ({customerSearchResults.length})</h2>
+              <button className="close-btn" onClick={() => setShowSearchResults(false)}>×</button>
+            </div>
+            <div className="search-results-grid">
+              {customerSearchResults.map(product => (
+                <div key={product.id} className="product-result-card" onClick={() => setSelectedShop(product.shop_id)}>
+                  <div className="product-name">{product.name}</div>
+                  {product.brand && <div className="product-brand">{product.brand}</div>}
+                  <div className="product-price">₹{product.price}</div>
+                  {product.shop_name && <div className="product-shop">at {product.shop_name}</div>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Hot Deals / Clearance Sale Section */}
         {hotDeals.length > 0 && (
